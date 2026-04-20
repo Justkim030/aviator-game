@@ -1814,7 +1814,7 @@ export default function App() {
         return prev.map(x => x.id===slotId ? { ...x, status:'idle', amount:0, autoCashout:null } : x)
       })
     } else if (action === 'cashout') {
-      socketRef.current?.emit('cashOut'); // CRITICAL: Notify server to save winnings
+      socketRef.current?.emit('cashOut'); // CRITICAL: Notify server to persist winnings
       doCashout(slotId, multRef.current)
     }
   }, [doCashout, showError])

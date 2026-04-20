@@ -1672,8 +1672,8 @@ export default function App() {
     setSlots(prev => {
       const slot = prev.find(s => s.id === slotId)
       if (!slot || slot.status !== 'active') return prev
-      const win = Number((slot.amount * atMult).toFixed(2))
-      setBal(b => { const n = Number((b + win).toFixed(2)); balRef.current = n; return n })
+      const win = slot.amount * atMult
+      setBal(b => { const n = b+win; balRef.current = n; return n })
       return prev.map(s => s.id === slotId ? { ...s, status:'idle', amount:0, autoCashout:null } : s)
     })
   }, [])
@@ -1797,18 +1797,16 @@ export default function App() {
     if (action === 'bet') {
       if (balRef.current < amount) { showError('Not enough balance. Please deposit.'); return }
 
-      let newStatus = 'queued';
       // If round is in betting phase, notify server immediately
       if (phase === 'waiting' || phase === 'countdown') {
         socketRef.current?.emit('placeBet', { amount });
-        newStatus = 'active'; // Mark as active immediately if already sent to server
       }
 
       // Keep local balance sync for instant UI feedback
       setBal(b => { const n = b - amount; balRef.current = n; return n })
       
       setSlots(prev => prev.map(s => s.id===slotId
-        ? { ...s, status: newStatus, amount, autoCashout:opts.autoCashout, autoBet:opts.autoBet } : s))
+        ? { ...s, status:'queued', amount, autoCashout:opts.autoCashout, autoBet:opts.autoBet } : s))
     } else if (action === 'cancel') {
       setSlots(prev => {
         const s = prev.find(x => x.id===slotId)

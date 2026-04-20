@@ -1169,7 +1169,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
   const [loading, setLoading] = useState(false)
 
   const handlePay = async () => {
-    const n = parseFloat(amt)
+    const n = Number(amt)
     if (!amt || isNaN(n) || n < 50) {
       setErr('Minimum deposit is KES 50')
       return
@@ -1672,8 +1672,8 @@ export default function App() {
     setSlots(prev => {
       const slot = prev.find(s => s.id === slotId)
       if (!slot || slot.status !== 'active') return prev
-      const win = slot.amount * atMult
-      setBal(b => { const n = b+win; balRef.current = n; return n })
+      const win = Number((slot.amount * atMult).toFixed(2))
+      setBal(b => { const n = Number((b + win).toFixed(2)); balRef.current = n; return n })
       return prev.map(s => s.id === slotId ? { ...s, status:'idle', amount:0, autoCashout:null } : s)
     })
   }, [])

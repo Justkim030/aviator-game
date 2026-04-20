@@ -1717,15 +1717,17 @@ export default function App() {
       setSlots(prev => prev.map(sl => {
         // Handle automatic betting for Auto-Play slots
         if (sl.autoBet && sl.status === 'idle') {
-          const amount = sl.amount || 10
-          if (balRef.current >= amount) {
-            s.emit('placeBet', { amount })
-            return { ...sl, status: 'queued', amount }
+          const betAmt = sl.amount || 10
+          if (balRef.current >= betAmt) {
+            s.emit('placeBet', { amount: betAmt })
+            return { ...sl, status: 'active', amount: betAmt }
           }
         }
-        // Handle automatic betting for manually Queued bets
+        
+        // Fix: Transition queued bets to active immediately after emitting to server
         if (sl.status === 'queued') {
           s.emit('placeBet', { amount: sl.amount })
+          return { ...sl, status: 'active' }
         }
         return sl
       }))

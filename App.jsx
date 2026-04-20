@@ -1164,6 +1164,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
 function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
   const [amt, setAmt] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -1177,6 +1178,10 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
       setErr('Enter a valid phone number')
       return
     }
+    if (!email.includes('@')) {
+      setErr('Enter a valid email for the receipt')
+      return
+    }
 
     setErr('')
     setLoading(true)
@@ -1188,7 +1193,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         body: JSON.stringify({
           amount: n,
           phone: phone,
-          email: 'user@example.com' // Should ideally come from auth context
+          email: email
         })
       });
 

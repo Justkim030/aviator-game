@@ -1813,6 +1813,7 @@ export default function App() {
         return prev.map(x => x.id===slotId ? { ...x, status:'idle', amount:0, autoCashout:null } : x)
       })
     } else if (action === 'cashout') {
+      socketRef.current?.emit('cashOut');
       doCashout(slotId, multRef.current)
     }
   }, [doCashout, showError])

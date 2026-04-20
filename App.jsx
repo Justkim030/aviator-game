@@ -1169,7 +1169,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
   const [loading, setLoading] = useState(false)
 
   const handlePay = async () => {
-    const n = Number(amt)
+    const n = parseFloat(amt)
     if (!amt || isNaN(n) || n < 50) {
       setErr('Minimum deposit is KES 50')
       return

@@ -1645,6 +1645,7 @@ export default function App() {
   const [showLogin,    setShowLogin]    = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [userPhone,    setUserPhone]    = useState('')
+  const [authToken,    setAuthToken]    = useState('')
   const [isMobile,       setIsMobile]       = useState(window.innerWidth < 720)
   const [showSidebar,    setShowSidebar]    = useState(false)
   const [showSecondPanel,setShowSecondPanel]= useState(false)
@@ -1662,6 +1663,7 @@ export default function App() {
 
   const handleAuthSuccess = (user) => {
     setUserPhone(user.phone);
+    setAuthToken(user.token);
     setBal(user.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
@@ -1800,10 +1802,13 @@ export default function App() {
 
   // Register user with socket whenever login status changes
   useEffect(() => {
-    if (isLoggedIn && userPhone && socketRef.current) {
-      socketRef.current.emit('registerUser', userPhone);
+    if (isLoggedIn && socketRef.current && authToken) {
+      socketRef.current.emit('authenticate', { 
+        phone: userPhone, 
+        token: authToken 
+      });
     }
-  }, [isLoggedIn, userPhone]);
+  }, [isLoggedIn, userPhone, authToken]);
 
   const handleBetAction = useCallback((slotId, action, amount, opts) => {
     if (action === 'bet') {

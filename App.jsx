@@ -1801,8 +1801,8 @@ export default function App() {
   const [sideTab,      setSideTab]      = useState('all')
   const [chatMsgs,     setChatMsgs]     = useState(() => {
     const now = new Date()
-    const ts = (off=0) => {
-      const d = new Date(now.getTime() - off*1000)
+    const ts = (off) => {
+      const d = new Date(now.getTime() - (off || 0) * 1000)
       return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
     }
     return [

@@ -3,6 +3,7 @@ import { io } from 'socket.io-client'
 
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const ADMIN_PHONE_UI = '254700000000'; // Match this with your ADMIN_PHONE server env
 
 // SECURITY NOTE: Do NOT use VITE_ prefixes for actual secrets.
 // These should be fetched from the backend per-round.
@@ -124,7 +125,7 @@ const NAV_ITEMS = [
   { label:'App' },
 ]
 
-function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister }) {
+function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick }) {
   return (
     <div style={{ background:'#0d0f18', borderBottom:`1px solid ${C.border}`, flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       {/* Top row */}
@@ -132,7 +133,10 @@ function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister }) {
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontSize:16, color:C.textDim, cursor:'pointer' }}>☰</span>
           {/* BRAND: Aviator (not Betika) */}
-          <span style={{ fontWeight:900, fontSize:22, color:C.red, fontStyle:'italic', letterSpacing:-0.5 }}>✈ Aviator</span>
+          <span 
+            onClick={onLogoClick}
+            style={{ fontWeight:900, fontSize:22, color:C.red, fontStyle:'italic', letterSpacing:-0.5, cursor:'pointer', userSelect:'none' }}
+          >✈ Aviator</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {/* View Fullscreen — functional */}
@@ -1665,6 +1669,57 @@ function AviatorFooter({ onHide }) {
   )
 }
 
+// ─── ADMIN DASHBOARD COMPONENT ────────────────────────────────────────────────
+function AdminDashboard({ token, onClose, refreshTrigger }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`${API_URL}/api/admin/upcoming`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => r.json())
+    .then(d => { setData(d); setLoading(false) })
+    .catch(() => setLoading(false))
+  }, [token, refreshKey, refreshTrigger])
+
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.9)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#1a1b2e', borderRadius:12, padding:24, width:'100%', maxWidth:600, maxHeight:'80vh', overflowY:'auto', border:`1px solid ${C.yellow}` }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <h2 style={{ color:C.yellow, margin:0, fontSize:18 }}>🚀 ADMIN: UPCOMING</h2>
+            <button onClick={() => setRefreshKey(p => p + 1)} style={{ background:C.yellow, color:'#000', border:'none', borderRadius:4, padding:'4px 10px', fontSize:11, fontWeight:800, cursor:'pointer' }}>REFRESH</button>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
+        </div>
+        {loading ? <p>Loading future rounds...</p> : (
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead>
+              <tr style={{ borderBottom:`1px solid ${C.border}`, color:C.muted }}>
+                <th style={{ textAlign:'left', padding:8 }}>Round ID</th>
+                <th style={{ textAlign:'left', padding:8 }}>Nonce</th>
+                <th style={{ textAlign:'right', padding:8 }}>Crash Point</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.upcoming?.map(r => (
+                <tr key={r.roundId} style={{ borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
+                  <td style={{ padding:8 }}>{r.roundId}</td>
+                  <td style={{ padding:8 }}>{r.nonce}</td>
+                  <td style={{ padding:8, textAlign:'right', fontWeight:800, color: r.crashMultiplier >= 2 ? C.pink : '#fff' }}>{r.crashMultiplier.toFixed(2)}x</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [loading,      setLoading]      = useState(true)
@@ -1714,6 +1769,10 @@ export default function App() {
   const [isMobile,       setIsMobile]       = useState(window.innerWidth < 720)
   const [showSidebar,    setShowSidebar]    = useState(false)
   const [showSecondPanel,setShowSecondPanel]= useState(false)
+  const [isAdmin,        setIsAdmin]        = useState(false)
+  const [showAdminDb,    setShowAdminDb]    = useState(false)
+  const [logoClicks,     setLogoClicks]     = useState(0)
+  const [adminRefreshTrigger, setAdminRefreshTrigger] = useState(0)
 
   const socketRef    = useRef(null)
   const slotsRef     = useRef(slots)
@@ -1729,12 +1788,25 @@ export default function App() {
 
   const handleAuthSuccess = (user) => {
     setUserPhone(user.phone);
+    setIsAdmin(user.phone === ADMIN_PHONE_UI);
     setAuthToken(user.token); // Secure JWT from backend
     setBal(user.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
     setShowRegister(false);
     setShowDeposit(true);
+  };
+
+  const handleLogoClick = () => {
+    if (!isAdmin) return;
+    setLogoClicks(prev => {
+      const next = prev + 1;
+      if (next >= 7) {
+        setShowAdminDb(true);
+        return 0;
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -1857,6 +1929,7 @@ export default function App() {
       setPhase('crashed'); setMult(cv); multRef.current = cv
       setHistory(prev => [cv, ...prev.slice(0,19)])
       setPrevBots(botsRef.current)
+      setAdminRefreshTrigger(p => p + 1)
       setSlots(prev => {
         return prev.map(sl => {
           if (sl.status === 'active') {
@@ -1975,11 +2048,14 @@ export default function App() {
         onLogin={()=>{ if(isLoggedIn) setIsLoggedIn(false); else setShowLogin(true) }}
         onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
+        onLogoClick={handleLogoClick}
       />
       <GoBackBar/>
 
       {/* Game sub-header */}
       <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat}/>
+
+      {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 
       {/* Main area */}
       <div style={{ flex:1, display:'flex', overflow:'hidden', position:'relative' }}>
@@ -2029,7 +2105,13 @@ export default function App() {
 
           {/* Canvas + overlays */}
           <div style={{ flex:1, position:'relative', overflow:'hidden', minHeight:0 }}>
-            <GameCanvas phase={phase} multiplierRef={multRef} startTime={startTime}/>
+            <GameCanvas 
+              phase={phase} 
+              multiplierRef={multRef} 
+              lastUpdateRef={lastUpdateRef} 
+              startTime={startTime} 
+              lowPerf={lowPerf}
+            />
             <WaitingOverlay phase={phase}/>
             <ErrorBar message={errorBar} onDismiss={()=>setErrorBar('')}/>
 

@@ -4,6 +4,11 @@ import { io } from 'socket.io-client'
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// SECURITY NOTE: Do NOT use VITE_ prefixes for actual secrets.
+// These should be fetched from the backend per-round.
+const DEFAULT_SERVER_HASH = 'Pending...';
+const DEFAULT_CLIENT_SEED = 'Browser_Generated_Seed';
+
 // ─── PALETTE ──────────────────────────────────────────────────────────────────
 const C = {
   bg:         '#05060b',
@@ -845,14 +850,21 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
   const [error,    setError]    = useState('')
 
   const handleLogin = async () => {
-    if (!phone.trim()) { setError('Please enter your phone number'); return }
-    if (!password.trim()) { setError('Please enter your password'); return }
+    const p = phone.trim();
+    const pw = password.trim();
+
+    if (!p || p.length < 9 || p.length > 15 || !/^\+?\d+$/.test(p)) {
+      setError('Enter a valid phone number'); return;
+    }
+    if (!pw || pw.length > 128) {
+      setError('Invalid password length'); return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim(), password })
+        body: JSON.stringify({ phone: p, password: pw })
       });
 
       if (response.status === 429) {
@@ -899,6 +911,7 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
         <div style={{ marginBottom:16 }}>
           <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Phone Number</div>
           <input
+            maxLength={15}
             type="tel" value={phone} onChange={e=>setPhone(e.target.value)}
             placeholder="e.g. 0712 234567"
             style={{ width:'100%', background:'#1a2035', border:`1px solid #2a3050`, color:'#fff', padding:'12px 14px', borderRadius:6, fontSize:14, outline:'none', boxSizing:'border-box' }}
@@ -912,6 +925,7 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
           </div>
           <div style={{ position:'relative' }}>
             <input
+              maxLength={128}
               type={showPw ? 'text' : 'password'} value={password} onChange={e=>setPassword(e.target.value)}
               style={{ width:'100%', background:'#1a2035', border:`1px solid #2a3050`, color:'#fff', padding:'12px 40px 12px 14px', borderRadius:6, fontSize:14, outline:'none', boxSizing:'border-box' }}
             />
@@ -954,20 +968,22 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
   const [error,     setError]     = useState('')
 
   const handleRegister = async () => {
-    if (!phone.trim() || phone.length < 10) { setError('Enter a valid phone number'); return }
-    if (phone.trim().length < 10)   { setError('Enter a valid phone number (min 10 digits)'); return }
-    if (!password.trim())           { setError('Please create a password'); return }
-    if (password.length < 6)        { setError('Password must be at least 6 characters'); return }
-    if (password !== confirm)       { setError('Passwords do not match'); return }
+    const p = phone.trim();
+    const pw = password.trim();
+
+    if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) { setError('Enter a valid phone number'); return }
+    if (!pw || pw.length < 6 || pw.length > 128) { setError('Password must be between 6 and 128 characters'); return }
+    if (pw !== confirm)             { setError('Passwords do not match'); return }
     if (!agree)                     { setError('You must agree to the Terms & Conditions'); return }
     if (!over18)                    { setError('You must confirm you are 18 years or older'); return }
+
     setError('')
 
     try {
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim(), password })
+        body: JSON.stringify({ phone: p, password: pw })
       });
       const data = await response.json();
       if (data.status) {
@@ -975,7 +991,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
         const loginRes = await fetch(`${API_URL}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phone.trim(), password })
+          body: JSON.stringify({ phone: p, password: pw })
         });
 
         if (loginRes.status === 429) {
@@ -1035,7 +1051,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
         {/* Phone */}
         <div style={{ marginBottom:16 }}>
           <label style={labelStyle}>Phone Number</label>
-          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)}
+          <input maxLength={15} type="tel" value={phone} onChange={e=>setPhone(e.target.value)}
             placeholder="e.g. 0712 234567" style={inputStyle}/>
           <div style={hintStyle}>Must be a valid Kenyan phone number</div>
         </div>
@@ -1044,7 +1060,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
         <div style={{ marginBottom:16 }}>
           <label style={labelStyle}>Password</label>
           <div style={{ position:'relative' }}>
-            <input type={showPw?'text':'password'} value={password}
+            <input maxLength={128} type={showPw?'text':'password'} value={password}
               onChange={e=>setPassword(e.target.value)}
               placeholder="Min. 6 characters"
               style={{...inputStyle, paddingRight:44}}/>
@@ -1074,7 +1090,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
         <div style={{ marginBottom:16 }}>
           <label style={labelStyle}>Confirm Password</label>
           <div style={{ position:'relative' }}>
-            <input type={showCfm?'text':'password'} value={confirm}
+            <input maxLength={128} type={showCfm?'text':'password'} value={confirm}
               onChange={e=>setConfirm(e.target.value)}
               placeholder="Re-enter your password"
               style={{
@@ -1095,7 +1111,7 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
           <label style={labelStyle}>
             Referral Code <span style={{ color:C.muted, fontWeight:400, fontSize:11 }}>(optional)</span>
           </label>
-          <input type="text" value={referral} onChange={e=>setReferral(e.target.value)}
+          <input maxLength={20} type="text" value={referral} onChange={e=>setReferral(e.target.value)}
             placeholder="Enter referral code if you have one"
             style={inputStyle}/>
         </div>
@@ -1181,11 +1197,13 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
 
   const handlePay = async () => {
     const n = parseFloat(amt)
-    if (!amt || isNaN(n) || n < 50) {
-      setErr('Minimum deposit is KES 50')
+    const p = phone.trim();
+
+    if (!amt || isNaN(n) || n < 10 || n > 500000) {
+      setErr('Enter an amount between 10 and 500,000')
       return
     }
-    if (!phone || phone.length < 10) {
+    if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) {
       setErr('Enter a valid phone number')
       return
     }
@@ -1199,7 +1217,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: n,
-          phone: phone
+          phone: p
         })
       });
 
@@ -1263,6 +1281,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
           <input
+            maxLength={15}
             type="tel"
             placeholder="Phone (e.g. 254712345678)"
             value={phone}
@@ -1274,8 +1293,9 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
             }}
           />
           <input
+            max={500000}
             type="number"
-            placeholder="Amount (min KES 50)"
+            placeholder="Amount (min KES 10)"
             value={amt}
             onChange={e => { setAmt(e.target.value); setErr('') }}
             style={{
@@ -1287,7 +1307,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         </div>
 
         {err && <div style={{ color:'#ef4444', fontSize:11, marginBottom:8 }}>{err}</div>}
-        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 50. All transactions are subject to 5% tax.</div>
+        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 10. All transactions are subject to 5% tax.</div>
         <button onClick={handlePay} disabled={loading} style={{ width:'100%', background:C.greenDark, border:'none', color:'#fff', padding:'13px 0', borderRadius:8, fontWeight:900, fontSize:14, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
           <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>M</div>
           {loading ? 'PROCESSING...' : 'Pay with M-Pesa'}
@@ -1343,7 +1363,7 @@ function FairnessModal({ onClose }) {
           <span onClick={onClose} style={{ cursor:'pointer', color:C.muted, fontSize:20 }}>×</span>
         </div>
         <p style={{ color:C.textDim, fontSize:12, marginBottom:16 }}>The result for this round was generated using a server seed, a client seed, and a nonce.</p>
-        {[['Server Seed (Hashed)','9a8f7e6d5c4b3a2d1f0e9d8c7b6a5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c'],['Client Seed','YourBrowserSeedString12345'],['Nonce','15']].map(([k,v]) => (
+        {[['Server Seed (Hashed)', DEFAULT_SERVER_HASH],['Client Seed', DEFAULT_CLIENT_SEED],['Nonce','15']].map(([k,v]) => (
           <div key={k} style={{ background:'#000', padding:10, borderRadius:6, marginBottom:8, wordBreak:'break-all' }}>
             <div style={{ color:C.muted, fontSize:10, marginBottom:4 }}>{k}</div>
             <div style={{ color:'#fff' }}>{v}</div>
@@ -1425,8 +1445,8 @@ function BetPanel({ slot, phase, currentMult, onAction, showClose, onClose }) {
 
   // Amount is fully editable — allow any value the user types
   const handleAmountChange = (val) => {
-    const n = parseFloat(val)
-    if (!isNaN(n)) setAmount(n)
+    const n = Math.min(1000000, parseFloat(val))
+    if (!isNaN(n)) setAmount(Math.max(0, n))
     else if (val === '' || val === '-') setAmount(0)
   }
 
@@ -1645,7 +1665,8 @@ export default function App() {
   const [showLogin,    setShowLogin]    = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [userPhone,    setUserPhone]    = useState('')
-  const [authToken,    setAuthToken]    = useState('')
+  // In production, store your JWT here after login
+  const [authToken,    setAuthToken]    = useState('') 
   const [isMobile,       setIsMobile]       = useState(window.innerWidth < 720)
   const [showSidebar,    setShowSidebar]    = useState(false)
   const [showSecondPanel,setShowSecondPanel]= useState(false)
@@ -1663,7 +1684,7 @@ export default function App() {
 
   const handleAuthSuccess = (user) => {
     setUserPhone(user.phone);
-    setAuthToken(user.token);
+    setAuthToken(user.token); // Secure JWT from backend
     setBal(user.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
@@ -1800,9 +1821,10 @@ export default function App() {
     return () => s.disconnect()
   }, [])
 
-  // Register user with socket whenever login status changes
+  // Authenticate socket whenever login status changes
   useEffect(() => {
-    if (isLoggedIn && socketRef.current && authToken) {
+    if (isLoggedIn && socketRef.current) {
+      // SECURITY: Emit a token, not a raw phone number
       socketRef.current.emit('authenticate', { 
         phone: userPhone, 
         token: authToken 

@@ -1902,9 +1902,31 @@ export default function App() {
 
   // Socket.io
   useEffect(() => {
-    setTimeout(() => setLoading(false), 2200)
-    const s = io(API_URL, { transports:['websocket'] })
+    // Force show main UI after 2.5 seconds regardless of socket status
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
+
+    const s = io(API_URL, { 
+      transports:['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+    })
     socketRef.current = s
+
+    s.on('connect', () => {
+      clearTimeout(timer);
+      setErrorBar('');
+    })
+
+    s.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
+    })
+    s.on('disconnect', () => {
+      showError('Disconnected. Reconnecting...');
+    })
 
     s.on('balanceUpdate', d => {
       setBal(d.balance);

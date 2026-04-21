@@ -220,14 +220,18 @@ function GoBackBar() {
 }
 
 // ─── GAME CANVAS ──────────────────────────────────────────────────────────────
-function GameCanvas({ phase, multiplierRef, startTime }) {
+function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf }) {
   const canvasRef   = useRef(null)
   const imgRef      = useRef(null)
   const imgOk       = useRef(false)
   const frozen      = useRef({ tx:0, ty:0, ox:52, oy:0 })
   const crashPlane  = useRef({ x:0, y:0, vx:9, vy:-2, angle:-0.3 })
+  const lastFrameTime = useRef(performance.now())
   const pinnedSince = useRef(null)
   const smoothedTy  = useRef(null)
+  const frameBuffer = useRef(null) // Offscreen frame buffer
+  const fctx        = useRef(null) // Context for frame buffer
+  const bgCache     = useRef(null) // Offscreen cache for high-performance rendering
 
   useEffect(() => {
     const img = new Image()
@@ -242,15 +246,56 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
     const ctx = canvas.getContext('2d')
     let raf
 
+    const updateBuffers = (W, H, dpr) => {
+      if (!frameBuffer.current) frameBuffer.current = document.createElement('canvas');
+      const fb = frameBuffer.current;
+      fb.width = W * dpr;
+      fb.height = H * dpr;
+      fctx.current = fb.getContext('2d');
+      fctx.current.scale(dpr, dpr);
+    }
+
+    // GPU-accelerated background caching: Pre-renders static sunburst and gradients
+    const updateBgCache = (W, H, dpr) => {
+      if (!bgCache.current) bgCache.current = document.createElement('canvas');
+      const cache = bgCache.current;
+      cache.width = W * dpr;
+      cache.height = H * dpr;
+      const bctx = cache.getContext('2d');
+      bctx.scale(dpr, dpr);
+
+      // Draw Sunburst (Bézier-style rays)
+      const sx = W * 0.02, sy = H * 1.08;
+      const len = Math.hypot(W * 1.1, H * 1.1) * 2;
+      const N = 36, a0 = -Math.PI * 1.08, a1 = -Math.PI * 0.01;
+      for (let i = 0; i < N; i++) {
+        const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
+        bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
+        bctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.005)';
+        bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
+        bctx.restore();
+      }
+      // Draw Spotlight (Deep Radial Gradient)
+      const g = bctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
+      g.addColorStop(0, 'rgba(180, 20, 30, 0.06)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      bctx.fillStyle = g;
+      bctx.fillRect(0, 0, W, H);
+    }
+
     const resize = () => {
       const dpr = window.devicePixelRatio || 1
       const r   = canvas.getBoundingClientRect()
       canvas.width  = r.width  * dpr
       canvas.height = r.height * dpr
       ctx.scale(dpr, dpr)
+      updateBuffers(r.width, r.height, dpr);
+      updateBgCache(r.width, r.height, dpr);
     }
     window.addEventListener('resize', resize)
     resize()
+
+    lastFrameTime.current = performance.now();
 
     // ── Plane: origin = visual tail connection point ─────────────────────────
     // The red trail curve ends at (x,y). We translate there and draw the plane
@@ -317,35 +362,14 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
       ctx.restore()
     }
 
-    function drawSunburst(W, H) {
-      const sx = W * 0.02, sy = H * 1.08
-      const len = Math.hypot(W * 1.1, H * 1.1) * 2
-      const N = 36, a0 = -Math.PI * 1.08, a1 = -Math.PI * 0.01
-      for (let i = 0; i < N; i++) {
-        const a = a0 + (i / N) * (a1 - a0), half = len * 0.075
-        ctx.save(); ctx.translate(sx, sy); ctx.rotate(a)
-        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.005)'
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-half,-len); ctx.lineTo(half,-len); ctx.closePath(); ctx.fill()
-        ctx.restore()
-      }
-    }
-
-    function drawSpotlight(W, H) {
-      const g = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
-      g.addColorStop(0, 'rgba(180, 20, 30, 0.06)'); // Deepened, very faint center glow
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    }
-
     function multToY(m, oy, availH) {
       const p = Math.min(Math.pow(Math.max(m - 1, 0), 0.6) / 4.0, 0.70);
       return Math.max(60, oy - p * availH)
     }
 
     // Returns the bezier tangent angle at the tip
+    // Implementation using Quadratic Bézier Curves for optimal growth visualization
     function drawCurve(ox, oy, tx, ty) {
-      // 1. Geometry: Use a middle control point to create the smooth "arc" climb
       const cpx = (ox + tx) / 2;
       const cpy = oy; // Keeping control point at start height keeps the curve flat at the beginning
 
@@ -381,15 +405,27 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
 
     const render = () => {
       raf = requestAnimationFrame(render)
+
+      const now = performance.now()
+      const dt = (now - lastFrameTime.current) / 1000 // delta in seconds
+      lastFrameTime.current = now
+
+      // Standardize logic to 60fps (approx 0.0166s per frame)
+      const fpsRatio = dt / (1 / 60)
+
       const rect = canvas.getBoundingClientRect()
       const W = rect.width, H = rect.height
       if (!W || !H) return
 
-      ctx.clearRect(0, 0, W, H)
-      ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, W, H)
-
-      drawSunburst(W, H)
-      drawSpotlight(W, H)
+      // Optimized blit: Clear frame and draw background from high-performance cache
+      ctx.fillStyle = '#05060b';
+      ctx.fillRect(0, 0, W, H);
+      if (bgCache.current) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform for pixel-perfect blit
+        ctx.drawImage(bgCache.current, 0, 0);
+        ctx.restore();
+      }
 
       // topMargin: enough headroom so the plane (drawn upward from tip) never clips the top edge
       // planeH/2 ~28px + angle offset ~20px + safety = 70px minimum
@@ -415,42 +451,35 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
 
         // Plane tail sits exactly on the x-axis at origin.
         // Gentle left-right taxi: oscillates ±18px around ox, period ~4s
-        const taxiX  = ox + Math.sin(t * (Math.PI * 2) / 4) * 18
-        const taxiAng = Math.sin(t * (Math.PI * 2) / 4) * 0.04 - 0.03  // tiny nose-up tilt
-
-        // Draw a short red trail stub so the line appears to start at the origin
-        ctx.beginPath()
-        ctx.moveTo(ox, oy)
-        ctx.lineTo(taxiX, oy)
-        ctx.strokeStyle = C.red
-        ctx.lineWidth = 3.5
-        ctx.lineCap = 'round'
-        ctx.stroke()
-
-        // Red dot at origin
-        ctx.beginPath()
-        ctx.arc(ox, oy, 4, 0, Math.PI * 2)
-        ctx.fillStyle = C.red
-        ctx.fill()
-
-        // Plane tail at the x-axis line, nose pointing right
-        drawPlane(taxiX, oy, taxiAng)
+        const taxiX = ox + Math.sin(t * (Math.PI * 2) / 4) * 18
+        const taxiAng = Math.sin(t * (Math.PI * 2) / 4) * 0.04 - 0.03
+        c.beginPath(); c.moveTo(ox, oy); c.lineTo(taxiX, oy); c.strokeStyle = C.red; c.lineWidth = 3.5; c.lineCap = 'round'; c.stroke()
+        c.beginPath(); c.arc(ox, oy, 4, 0, Math.PI * 2); c.fillStyle = C.red; c.fill()
+        drawPlane(c, taxiX, oy, taxiAng)
+        swapBuffers();
         return
       }
 
-      // ── FLYING ──────────────────────────────────────────────────────────────
       if (phase === 'flying') {
         const elapsed = Math.max(0, Date.now() - startTime)
         const maxX    = W * 0.8
         const rawTx   = ox + elapsed * 0.12;
         const pinned  = rawTx >= maxX
         const tx      = Math.min(rawTx, maxX)
-        const rawTy   = multToY(multiplierRef.current, oy, availH)
 
-        // ── Smooth Y with lerp so plane never jumps ──────────────────────────
-        // Target Y from multiplier; smoothedTy lerps toward it each frame
+        // ── Lag Compensation: Extrapolate Vertical Multiplier ──
+        // The server multiplier grows at e^(0.12 * t). We extrapolate between socket updates.
+        const dtUpdate = (now - lastUpdateRef.current) / 1000;
+        const predictedMult = multiplierRef.current * Math.exp(0.12 * dtUpdate);
+
+        const rawTy   = multToY(predictedMult, oy, availH)
+
+        // ── Frame-rate independent Lerp ──
+        // We use Math.pow to ensure the smoothing feels identical at 60Hz and 120Hz.
+        // Formula: 1 - Math.pow(1 - lerpFactor, deltaRatio)
         if (!smoothedTy.current) smoothedTy.current = oy
-        const lerpSpeed = 0.045  // lower = smoother/slower tracking
+        const baseLerp = 0.045
+        const lerpSpeed = 1 - Math.pow(1 - baseLerp, fpsRatio)
         smoothedTy.current += (rawTy - smoothedTy.current) * lerpSpeed
 
         let ty = smoothedTy.current
@@ -492,6 +521,21 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
 
         // Draw plane with tail exactly at curve tip
         drawPlane(tx, ty, planeAngle)
+
+        // ── Smooth Multiplier Visual ──
+        // Draw text inside canvas for 120fps lag-compensated updates
+        const displayMult = predictedMult.toFixed(2) + 'x';
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        const fontSize = W < 720 ? 58 : 92;
+        ctx.font = `900 ${fontSize}px "Arial Black", Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText(displayMult, W / 2, H / 2 - 20);
+        ctx.restore();
         return
       }
 
@@ -502,39 +546,33 @@ function GameCanvas({ phase, multiplierRef, startTime }) {
           // Use the same Quadratic logic for the static crashed trail
           const cpx = fox + (ftx - fox) * 0.45;
           const cpy = foy;
-          
-          const grad = ctx.createLinearGradient(ftx, fty, fox, foy);
-          grad.addColorStop(0, 'rgba(225, 29, 40, 0.35)');
-          grad.addColorStop(1, 'rgba(225, 29, 40, 0.01)');
-
-          ctx.beginPath()
-          ctx.moveTo(fox, foy)
-          ctx.quadraticCurveTo(cpx, cpy, ftx, fty)
-          ctx.lineTo(ftx, foy)
-          ctx.closePath()
-          ctx.fillStyle = grad
-          ctx.fill()
-          ctx.beginPath()
-          ctx.moveTo(fox, foy)
-          ctx.quadraticCurveTo(cpx, cpy, ftx, fty)
-          ctx.strokeStyle = 'rgba(225,29,40,0.45)'
-          ctx.lineWidth = 3.5
-          ctx.lineJoin = 'round'; ctx.lineCap = 'round'
-          ctx.stroke()
+          const grad = c.createLinearGradient(ftx, fty, fox, foy);
+          grad.addColorStop(0, 'rgba(225, 29, 40, 0.35)'); grad.addColorStop(1, 'rgba(225, 29, 40, 0.01)');
+          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.lineTo(ftx, foy); c.closePath(); c.fillStyle = grad; c.fill()
+          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.strokeStyle = 'rgba(225,29,40,0.45)'; c.lineWidth = 3.5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke()
         }
         const p = crashPlane.current
-        p.x += p.vx; p.vx *= 1.08
-        p.y += p.vy; p.vy -= 0.20
+        p.x += p.vx * fpsRatio; p.vx *= Math.pow(1.08, fpsRatio); p.y += p.vy * fpsRatio; p.vy -= 0.20 * fpsRatio
         p.angle = Math.atan2(p.vy, p.vx)
-        if (p.x < W + 140) drawPlane(p.x, p.y, p.angle)
+        if (p.x < W + 140) drawPlane(c, p.x, p.y, p.angle)
+        swapBuffers();
       }
+    }
+
+    const swapBuffers = () => {
+      if (!frameBuffer.current) return;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset for direct pixel blit
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(frameBuffer.current, 0, 0);
+      ctx.restore();
     }
     render()
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
     }
-  }, [phase, startTime])
+  }, [phase, startTime, lowPerf])
 
   return (
     <canvas
@@ -1322,7 +1360,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
 }
 
 // ─── SETTINGS MENU ────────────────────────────────────────────────────────────
-function SettingsMenu({ onClose, onFairness, username }) {
+function SettingsMenu({ onClose, onFairness, username, lowPerf, setLowPerf }) {
   const [sound, setSound] = useState(true)
   const [music, setMusic] = useState(false)
   const [anim,  setAnim]  = useState(true)
@@ -1335,7 +1373,12 @@ function SettingsMenu({ onClose, onFairness, username }) {
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:150 }}>
       <div onClick={e=>e.stopPropagation()} style={{ position:'absolute', top:44, right:8, background:'#1a1b2e', border:`1px solid ${C.border}`, borderRadius:10, padding:14, width:225, fontFamily:'Arial,sans-serif', boxShadow:'0 8px 32px rgba(0,0,0,0.6)', zIndex:151 }}>
         {username && <div style={{ fontWeight:700, fontSize:11, color:'#fff', marginBottom:12, paddingBottom:8, borderBottom:`1px solid ${C.border}` }}>{username}</div>}
-        {[['🔊 Sound',sound,setSound],['🎵 Music',music,setMusic],['✨ Animation',anim,setAnim]].map(([lbl,val,set]) => (
+        {[
+          ['🔊 Sound', sound, setSound],
+          ['🎵 Music', music, setMusic],
+          ['✨ Animation', anim, setAnim],
+          ['⚡ Low Performance', lowPerf, setLowPerf]
+        ].map(([lbl,val,set]) => (
           <div key={lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
             <span style={{ fontSize:12, color:'#fff' }}>{lbl}</span>
             <Toggle val={val} set={set}/>
@@ -1665,6 +1708,7 @@ export default function App() {
   const [showLogin,    setShowLogin]    = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [userPhone,    setUserPhone]    = useState('')
+  const [lowPerf,      setLowPerf]      = useState(false)
   // In production, store your JWT here after login
   const [authToken,    setAuthToken]    = useState('') 
   const [isMobile,       setIsMobile]       = useState(window.innerWidth < 720)
@@ -1676,6 +1720,7 @@ export default function App() {
   const balRef       = useRef(bal)
   const botsRef      = useRef(bots)
   const multRef      = useRef(1.0)
+  const lastUpdateRef = useRef(performance.now())
   const cashedOutRef = useRef(new Set())
 
   useEffect(() => { slotsRef.current = slots }, [slots])
@@ -1737,6 +1782,7 @@ export default function App() {
     s.on('gameState', d => {
       setPhase(d.phase); setCnt(d.countdown||0)
       setMult(d.multiplier||1.0); multRef.current = d.multiplier||1.0
+      lastUpdateRef.current = performance.now();
       if (d.startTime) setStartTime(d.startTime)
       if (d.phase === 'countdown' || d.phase === 'waiting') {
         cashedOutRef.current = new Set()
@@ -1777,6 +1823,7 @@ export default function App() {
     })
     s.on('flightStart', d => {
       setStartTime(d.startTime); setPhase('flying'); setMult(1.00); multRef.current = 1.0
+      lastUpdateRef.current = performance.now();
       cashedOutRef.current = new Set()
       setBots(makeBots(28))
       setTotalBets(p => p + Math.floor(Math.random()*200+50))
@@ -1784,6 +1831,7 @@ export default function App() {
     })
     s.on('multiplierUpdate', d => {
       multRef.current = d.multiplier
+      lastUpdateRef.current = performance.now();
       setMult(d.multiplier)
 
       if (Math.random() < 0.09) {
@@ -1915,6 +1963,8 @@ export default function App() {
           onClose={()=>setShowSettings(false)}
           onFairness={()=>{ setShowSettings(false); setShowFair(true) }}
           username={isLoggedIn ? userPhone : null}
+          lowPerf={lowPerf}
+          setLowPerf={setLowPerf}
         />
       )}
 
@@ -1993,11 +2043,6 @@ export default function App() {
                   <div style={{ fontSize:isMobile?54:88, fontWeight:900, color:C.red, fontFamily:'"Arial Black",Arial', lineHeight:1, textShadow:`0 0 30px rgba(225,29,40,0.6), 0 2px 8px rgba(0,0,0,0.9)`, userSelect:'none' }}>
                     {mult.toFixed(2)}x
                   </div>
-                </div>
-              )}
-              {phase === 'flying' && (
-                <div style={{ fontSize:isMobile?58:92, fontWeight:900, color:'#fff', fontFamily:'"Arial Black",Arial', lineHeight:1, textShadow:`0 0 80px rgba(60,140,255,0.4), 0 0 24px rgba(60,140,255,0.2), 0 2px 8px rgba(0,0,0,0.8)`, userSelect:'none' }}>
-                  {mult.toFixed(2)}x
                 </div>
               )}
             </div>

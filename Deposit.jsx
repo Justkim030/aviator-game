@@ -8,19 +8,31 @@ const Deposit = () => {
     const [loading, setLoading] = useState(false);
 
     const handleDeposit = async () => {
-        if (!phone || !amount) return alert('Please enter phone and amount');
-        
+        const p = phone.trim();
+        const n = parseFloat(amount);
+
+        if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) {
+            return alert('Please enter a valid phone number');
+        }
+        if (!amount || isNaN(n) || n < 50 || n > 500000) {
+            return alert('Please enter an amount between 50 and 500,000');
+        }
+
         setLoading(true);
         try {
             const response = await fetch(`${API_URL}/api/deposit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    amount: parseFloat(amount),
-                    phone: phone,
-                    email: 'user@example.com' // Replace with actual logged-in user email
+                    amount: n,
+                    phone: p
                 })
             });
+
+            if (response.status === 429) {
+                alert('Too many requests. Please try again later.');
+                return;
+            }
 
             const data = await response.json();
             
@@ -43,6 +55,7 @@ const Deposit = () => {
             <div style={{ marginTop: '15px' }}>
                 <label>Phone Number (e.g. 254700000000)</label>
                 <input 
+                    maxLength={15}
                     type="text" 
                     placeholder="254..." 
                     value={phone} 
@@ -51,6 +64,7 @@ const Deposit = () => {
                 />
                 <label>Amount (KES)</label>
                 <input 
+                    max={500000}
                     type="number" 
                     placeholder="Amount" 
                     value={amount} 

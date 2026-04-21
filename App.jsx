@@ -1902,22 +1902,19 @@ export default function App() {
 
   // Socket.io
   useEffect(() => {
-    // Force show main UI after 2.5 seconds regardless of socket status
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2500);
+    // Show main UI immediately - don't wait for socket
+    setLoading(false);
 
     const s = io(API_URL, { 
       transports:['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 10000,
+      timeout: 15000,
     })
     socketRef.current = s
 
     s.on('connect', () => {
-      clearTimeout(timer);
       setErrorBar('');
     })
 

@@ -2,10 +2,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { io } from 'socket.io-client'
 
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
-const API_URL = import.meta.env.VITE_API_URL;
-if (!API_URL) {
-  throw new Error('VITE_API_URL environment variable is required');
-}
+// Allow localhost fallback for local development only
+const DEV_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || DEV_URL;
 const ADMIN_PHONE_UI = import.meta.env.VITE_ADMIN_PHONE || '';
 
 // SECURITY NOTE: Do NOT use VITE_ prefixes for actual secrets.

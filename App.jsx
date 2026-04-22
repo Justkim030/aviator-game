@@ -409,6 +409,11 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
     const render = () => {
       raf = requestAnimationFrame(render)
 
+      // Fix: Define 'c' as the offscreen context (fctx) for double buffering.
+      // This resolves the "ReferenceError: c is not defined" crash.
+      const c = fctx.current;
+      if (!c) return;
+
       const now = performance.now()
       const dt = (now - lastFrameTime.current) / 1000 // delta in seconds
       lastFrameTime.current = now

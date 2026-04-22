@@ -1,11 +1,9 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
 
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
-// Allow localhost fallback for local development only
-const DEV_URL = 'http://localhost:3001';
-const API_URL = import.meta.env.VITE_API_URL || DEV_URL;
-const ADMIN_PHONE_UI = import.meta.env.VITE_ADMIN_PHONE || '';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const ADMIN_PHONE_UI = '254700000000'; // Match this with your ADMIN_PHONE server env
 
 // SECURITY NOTE: Do NOT use VITE_ prefixes for actual secrets.
 // These should be fetched from the backend per-round.
@@ -81,15 +79,11 @@ function makeBots(n = 28) {
 // ─── SPLASH ───────────────────────────────────────────────────────────────────
 function SplashScreen() {
   return (
-    <div 
-      role="status"
-      aria-live="polite"
-      aria-label="Loading application"
-      style={{
-        position:'fixed', top:0, right:0, bottom:0, left:0, background:'#000', zIndex:9999,
-        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-        fontFamily:'Arial,sans-serif',
-      }}>
+    <div style={{
+      position:'fixed', inset:0, background:'#000', zIndex:9999,
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      fontFamily:'Arial,sans-serif',
+    }}>
       <div style={{ color:'#888', fontSize:10, letterSpacing:4, marginBottom:14, textTransform:'uppercase' }}>
         POWERED BY
       </div>
@@ -179,26 +173,14 @@ function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, i
       </div>
       {/* Nav strip */}
       <div style={{ display:'flex', overflowX:'auto', padding:'0 6px', borderTop:`1px solid ${C.border}` }} className="hide-scroll">
-        {NAV_ITEMS.map((n, i) => (
-          <div 
-            key={n.label}
-            role="button"
-            tabIndex={0}
-            aria-label={n.label}
-            onClick={() => {}}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-              }
-            }}
-            style={{
-              position:'relative', flexShrink:0, padding:'8px 10px',
-              fontSize:12, fontWeight: n.active ? 700 : 400,
-              color: n.active ? '#fff' : C.textDim,
-              borderBottom: n.active ? `2px solid ${C.green}` : '2px solid transparent',
-              cursor:'pointer', whiteSpace:'nowrap',
-            }}
-          >
+        {NAV_ITEMS.map(n => (
+          <div key={n.label} style={{
+            position:'relative', flexShrink:0, padding:'8px 10px',
+            fontSize:12, fontWeight: n.active ? 700 : 400,
+            color: n.active ? '#fff' : C.textDim,
+            borderBottom: n.active ? `2px solid ${C.green}` : '2px solid transparent',
+            cursor:'pointer', whiteSpace:'nowrap',
+          }}>
             {n.label}
             {n.badge && (
               <span style={{
@@ -260,10 +242,6 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
     img.src = '/assets/plane.png'
     img.onload  = () => { imgRef.current = img; imgOk.current = true }
     img.onerror = () => { imgOk.current = false }
-    return () => {
-      img.onload = null
-      img.onerror = null
-    }
   }, [])
 
   useEffect(() => {
@@ -431,6 +409,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
     const render = () => {
       raf = requestAnimationFrame(render)
 
+      const c = fctx.current;
+      if (!c) return;
+
       const now = performance.now()
       const dt = (now - lastFrameTime.current) / 1000 // delta in seconds
       lastFrameTime.current = now
@@ -442,14 +423,14 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const W = rect.width, H = rect.height
       if (!W || !H) return
 
-      // Draw frame to offscreen buffer first (Double Buffering)
-      c.fillStyle = '#05060b';
-      c.fillRect(0, 0, W, H);
+      // Optimized blit: Clear frame and draw background from high-performance cache
+      ctx.fillStyle = '#05060b';
+      ctx.fillRect(0, 0, W, H);
       if (bgCache.current) {
-        c.save();
-        c.setTransform(1, 0, 0, 1, 0, 0); 
-        c.drawImage(bgCache.current, 0, 0);
-        c.restore();
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform for pixel-perfect blit
+        ctx.drawImage(bgCache.current, 0, 0);
+        ctx.restore();
       }
 
       // topMargin: enough headroom so the plane (drawn upward from tip) never clips the top edge
@@ -578,19 +559,19 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       ctx.restore();
     }
 
-    render(); // Initial call to start the animation loop
+    render();
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
-  }, [phase, startTime, lowPerf]); // Consolidated dependencies
+  }, [phase, startTime, lowPerf]);
 
   return (
     <canvas
       ref={canvasRef}
       style={{ width:'100%', height:'100%', position:'absolute', inset:0, display:'block' }}
     />
-  );
+  )
 }
 
 // ─── WAITING OVERLAY ──────────────────────────────────────────────────────────
@@ -766,10 +747,10 @@ function HistoryBar({ history }) {
 
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 function Sidebar({ bets, prevBets, activeTab, onTab, totalCount }) {
-  const sortedBets = useMemo(() => [...bets].sort((a,b) => b.amount - a.amount), [bets])
-  const sortedPrev = useMemo(() => [...prevBets].sort((a,b) => b.amount - a.amount), [prevBets])
-  const topBets = useMemo(() => [...bets].sort((a,b) => (b.win||0)-(a.win||0)), [bets])
-  const list = activeTab==='all' ? sortedBets : activeTab==='previous' ? sortedPrev : topBets
+  const sortedBets  = [...bets].sort((a,b) => b.amount - a.amount)
+  const sortedPrev  = [...prevBets].sort((a,b) => b.amount - a.amount)
+  const topBets     = [...bets].sort((a,b) => (b.win||0)-(a.win||0))
+  const list        = activeTab==='all' ? sortedBets : activeTab==='previous' ? sortedPrev : topBets
   return (
     <aside style={{ width:220, background:C.sidebar, borderRight:`1px solid ${C.border}`, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}` }}>
@@ -899,11 +880,8 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
   const [error,    setError]    = useState('')
 
   const handleLogin = async () => {
-    const rawPhone = phone.trim();
+    const p = phone.trim();
     const pw = password.trim();
-
-    // Sanitize phone number - remove all non-digit characters except leading +
-    const p = rawPhone.replace(/[^\d+]/g, '');
 
     if (!p || p.length < 9 || p.length > 15 || !/^\+?\d+$/.test(p)) {
       setError('Enter a valid phone number'); return;
@@ -921,12 +899,6 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
 
       if (response.status === 429) {
         setError('Too many login attempts. Please try again in 15 minutes.');
-        return;
-      }
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        setError(errData.message || `Login failed (${response.status})`);
         return;
       }
 
@@ -1026,11 +998,8 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
   const [error,     setError]     = useState('')
 
   const handleRegister = async () => {
-    const rawPhone = phone.trim();
+    const p = phone.trim();
     const pw = password.trim();
-
-    // Sanitize phone number - remove all non-digit characters except leading +
-    const p = rawPhone.replace(/[^\d+]/g, '');
 
     if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) { setError('Enter a valid phone number'); return }
     if (!pw || pw.length < 6 || pw.length > 128) { setError('Password must be between 6 and 128 characters'); return }
@@ -1046,13 +1015,6 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: p, password: pw })
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        setError(errData.message || `Registration failed (${response.status})`);
-        return;
-      }
-
       const data = await response.json();
       if (data.status) {
         // Auto-login after registration
@@ -1064,12 +1026,6 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
 
         if (loginRes.status === 429) {
           setError('Registration successful, but too many login attempts. Please wait 15 minutes.');
-          return;
-        }
-
-        if (!loginRes.ok) {
-          const errData = await loginRes.json().catch(() => ({}));
-          setError(errData.message || `Auto-login failed (${loginRes.status})`);
           return;
         }
 
@@ -1271,10 +1227,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
 
   const handlePay = async () => {
     const n = parseFloat(amt)
-    const rawPhone = phone.trim();
-
-    // Sanitize phone number
-    const p = rawPhone.replace(/[^\d+]/g, '');
+    const p = phone.trim();
 
     if (!amt || isNaN(n) || n < 10 || n > 500000) {
       setErr('Enter an amount between 10 and 500,000')
@@ -1300,13 +1253,6 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
 
       if (response.status === 429) {
         setErr('Too many requests. Please try again later.');
-        setLoading(false);
-        return;
-      }
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        setErr(errData.message || `Payment failed (${response.status})`);
         setLoading(false);
         return;
       }
@@ -1715,26 +1661,16 @@ function AviatorFooter({ onHide }) {
 function AdminDashboard({ token, onClose, refreshTrigger }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     setLoading(true)
-    setError(null)
     fetch(`${API_URL}/api/admin/upcoming`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
-    .then(r => {
-      if (!r.ok) {
-        if (r.status === 401 || r.status === 403) {
-          throw new Error('Unauthorized access')
-        }
-        throw new Error(`Request failed: ${r.status}`)
-      }
-      return r.json()
-    })
+    .then(r => r.json())
     .then(d => { setData(d); setLoading(false) })
-    .catch(err => { setError(err.message); setLoading(false) })
+    .catch(() => setLoading(false))
   }, [token, refreshKey, refreshTrigger])
 
   return (
@@ -1747,14 +1683,7 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
           </div>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
         </div>
-        {loading ? <p>Loading future rounds...</p> : error ? (
-          <div style={{ color: C.red, padding: 20, textAlign: 'center' }}>
-            <p>Error: {error}</p>
-            <button onClick={() => setRefreshKey(p => p + 1)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}>
-              Retry
-            </button>
-          </div>
-        ) : (
+        {loading ? <p>Loading future rounds...</p> : (
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.border}`, color:C.muted }}>
@@ -1801,8 +1730,8 @@ export default function App() {
   const [sideTab,      setSideTab]      = useState('all')
   const [chatMsgs,     setChatMsgs]     = useState(() => {
     const now = new Date()
-    const ts = (off) => {
-      const d = new Date(now.getTime() - (off || 0) * 1000)
+    const ts = (off=0) => {
+      const d = new Date(now.getTime() - off*1000)
       return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
     }
     return [
@@ -1902,28 +1831,9 @@ export default function App() {
 
   // Socket.io
   useEffect(() => {
-    // Show main UI immediately - don't wait for socket
-    setLoading(false);
-
-    const s = io(API_URL, { 
-      transports:['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 15000,
-    })
+    setTimeout(() => setLoading(false), 2200)
+    const s = io(API_URL, { transports:['websocket'] })
     socketRef.current = s
-
-    s.on('connect', () => {
-      setErrorBar('');
-    })
-
-    s.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
-    })
-    s.on('disconnect', () => {
-      showError('Disconnected. Reconnecting...');
-    })
 
     s.on('balanceUpdate', d => {
       setBal(d.balance);
@@ -2063,19 +1973,6 @@ export default function App() {
   }, [])
 
   if (loading) return <SplashScreen/>
-  
-  // Debug: Show error bar if set
-  if (errorBar) {
-    return (
-      <div style={{ height:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:C.bg, color:C.red, fontFamily:'Arial,sans-serif' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:24, marginBottom:20 }}>Connection Error</div>
-          <div style={{ color:C.textDim }}>{errorBar}</div>
-        </div>
-      </div>
-    )
-  }
-  
   if (showRegister) return (
     <RegisterPage
       onBack={()=>setShowRegister(false)}
@@ -2203,7 +2100,7 @@ export default function App() {
               startTime={startTime} 
               lowPerf={lowPerf}
             />
-            <WaitingOverlay phase={phase} />
+            <WaitingOverlay phase={phase} isMobile={isMobile} />
             <ErrorBar message={errorBar} onDismiss={()=>setErrorBar('')}/>
 
             {/* Multiplier overlay */}

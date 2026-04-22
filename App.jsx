@@ -275,7 +275,6 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       for (let i = 0; i < N; i++) {
         const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
         bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
-        bctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.005)';
         bctx.fillStyle = i % 2 === 0 ? 'rgba(168, 85, 247, 0.02)' : 'rgba(168, 85, 247, 0.01)';
         bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
         bctx.restore();
@@ -512,7 +511,6 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         planeAngle = Math.max(-0.43, Math.min(0.20, planeAngle))
         const displayMult = predictedMult.toFixed(2) + 'x';
         const fontSize = W < 720 ? 58 : 92;
-        c.fillStyle = '#fff';
         c.fillStyle = '#ffffff';
         c.font = `900 ${fontSize}px "Arial Black", Arial`;
         c.textAlign = 'center';
@@ -1648,7 +1646,6 @@ function BetPanel({ slot, phase, currentMult, onAction, showClose, onClose }) {
               userSelect:'none',
             }}
           >
-            {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
             {v >= 1000 ? `${(v/1000).toLocaleString()}k` : v}
           </div>
         ))}

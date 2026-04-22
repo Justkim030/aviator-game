@@ -275,13 +275,13 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       for (let i = 0; i < N; i++) {
         const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
         bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
-        bctx.fillStyle = i % 2 === 0 ? 'rgba(168, 85, 247, 0.02)' : 'rgba(168, 85, 247, 0.01)';
+        bctx.fillStyle = i % 2 === 0 ? 'rgba(30, 30, 30, 0.02)' : 'rgba(30, 30, 30, 0.01)'; // Dark grey for sunburst rays
         bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
         bctx.restore();
       }
       // Draw Spotlight (Deep Radial Gradient)
       const g = bctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
-      g.addColorStop(0, 'rgba(225, 29, 40, 0.12)');
+      g.addColorStop(0, 'rgba(30, 30, 30, 0.12)'); // Dark grey for radial gradient
       g.addColorStop(1, 'rgba(0,0,0,0)');
       bctx.fillStyle = g;
       bctx.fillRect(0, 0, W, H);

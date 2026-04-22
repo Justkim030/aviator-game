@@ -268,8 +268,22 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const bctx = cache.getContext('2d');
       bctx.scale(dpr, dpr);
 
-      // Entirely dark background as requested
-      bctx.fillStyle = C.bg;
+      // Draw Sunburst (Bézier-style rays)
+      const sx = W * 0.02, sy = H * 1.08;
+      const len = Math.hypot(W * 1.1, H * 1.1) * 2;
+      const N = 36, a0 = -Math.PI * 1.08, a1 = -Math.PI * 0.01;
+      for (let i = 0; i < N; i++) {
+        const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
+        bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
+        bctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.005)';
+        bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
+        bctx.restore();
+      }
+      // Draw Spotlight (Deep Radial Gradient)
+      const g = bctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
+      g.addColorStop(0, 'rgba(180, 20, 30, 0.06)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      bctx.fillStyle = g;
       bctx.fillRect(0, 0, W, H);
     }
 
@@ -406,13 +420,12 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const W = rect.width, H = rect.height
       if (!W || !H) return
 
-      const c = fctx.current;
-      if (!c) return;
-
+      // Draw frame to offscreen buffer first (Double Buffering)
+      c.fillStyle = '#05060b';
       c.fillRect(0, 0, W, H);
       if (bgCache.current) {
         c.save();
-        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.setTransform(1, 0, 0, 1, 0, 0); 
         c.drawImage(bgCache.current, 0, 0);
         c.restore();
       }
@@ -497,14 +510,13 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         planeAngle = Math.max(-0.43, Math.min(0.20, planeAngle))
         const displayMult = predictedMult.toFixed(2) + 'x';
         const fontSize = W < 720 ? 58 : 92;
-        c.fillStyle = '#ffffff';
         c.font = `900 ${fontSize}px "Arial Black", Arial`;
         c.textAlign = 'center';
         c.textBaseline = 'middle';
         if (!lowPerf) {
-          c.shadowColor = 'rgba(0,0,0,0.95)';
-          c.shadowBlur = 18;
-          c.shadowOffsetY = 4;
+          c.shadowColor = 'rgba(0,0,0,0.8)';
+          c.shadowBlur = 10;
+          c.shadowOffsetY = 2;
         }
         c.save(); // Save context before applying text-specific styles
         // Place text in the middle of the screen slightly up
@@ -544,19 +556,19 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       ctx.restore();
     }
 
-    render();
+    render(); // Initial call to start the animation loop
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
-  }, [phase, startTime, lowPerf]);
+  }, [phase, startTime, lowPerf]); // Consolidated dependencies
 
   return (
     <canvas
       ref={canvasRef}
       style={{ width:'100%', height:'100%', position:'absolute', inset:0, display:'block' }}
     />
-  )
+  );
 }
 
 // ─── WAITING OVERLAY ──────────────────────────────────────────────────────────
@@ -676,7 +688,7 @@ function WaitingOverlay({ phase }) {
 }
 
 // ─── GAME SUB-HEADER ──────────────────────────────────────────────────────────
-function GameSubHeader({ bal, onSettings, onChat, showChat, onBalanceClick }) {
+function GameSubHeader({ bal, onSettings, onChat, showChat }) {
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -684,9 +696,7 @@ function GameSubHeader({ bal, onSettings, onChat, showChat, onBalanceClick }) {
     }}>
       <span style={{ color:C.red, fontWeight:900, fontSize:15, fontStyle:'italic', fontFamily:'"Arial Black",Arial' }}>✈ Aviator</span>
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        <div onClick={onBalanceClick} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-          <AnimBalance value={bal} />
-        </div>
+        <AnimBalance value={bal} />
         <span onClick={onSettings} style={{
           color:C.muted, fontSize:18, cursor:'pointer', userSelect:'none',
           lineHeight:1, padding:'2px 4px',
@@ -739,7 +749,7 @@ function Sidebar({ bets, prevBets, activeTab, onTab, totalCount }) {
   const topBets     = [...bets].sort((a,b) => (b.win||0)-(a.win||0))
   const list        = activeTab==='all' ? sortedBets : activeTab==='previous' ? sortedPrev : topBets
   return (
-    <aside style={{ width:'100%', height:'100%', background:C.sidebar, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
+    <aside style={{ width:220, background:C.sidebar, borderRight:`1px solid ${C.border}`, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}` }}>
         {[['all','ALL BETS'],['previous','PREVIOUS'],['top','TOP']].map(([k,lbl]) => (
           <div key={k} onClick={() => onTab(k)} style={{
@@ -1204,61 +1214,6 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
   )
 }
 
-// ─── WITHDRAWAL MODAL ─────────────────────────────────────────────────────────
-function WithdrawalModal({ onClose, isLoggedIn, balance, phone, token }) {
-  const [amt, setAmt] = useState('')
-  const [err, setErr] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleWithdraw = async () => {
-    const n = parseFloat(amt)
-    if (isNaN(n) || n < 100) return setErr('Minimum withdrawal is KES 100')
-    if (n > balance) return setErr('Insufficient balance')
-
-    setLoading(true)
-    try {
-      const res = await fetch(`${API_URL}/api/withdraw`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount: n, phone })
-      })
-      const data = await res.json()
-      if (data.status) {
-        alert('Withdrawal request received!');
-        onClose();
-      } else { setErr(data.message) }
-    } catch (e) { setErr('Server error') }
-    setLoading(false)
-  }
-
-  if (!isLoggedIn) return null
-
-  return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:'#1a1b2e', borderRadius:12, padding:24, width:360, maxWidth:'92vw', border:`1px solid ${C.border}` }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <span style={{ fontWeight:900, fontSize:18, color:'#fff' }}>Withdraw</span>
-          <span onClick={onClose} style={{ cursor:'pointer', color:C.muted, fontSize:24 }}>×</span>
-        </div>
-        <div style={{ marginBottom:16 }}>
-          <div style={{ color:C.textDim, fontSize:12, marginBottom:4 }}>Current Balance</div>
-          <div style={{ color:'#fff', fontWeight:800, fontSize:20 }}>KES {balance.toFixed(2)}</div>
-        </div>
-        <input
-          type="number"
-          placeholder="Amount (min 100)"
-          value={amt}
-          onChange={e=>setAmt(e.target.value)}
-          style={{ width:'100%', background:'transparent', border:`1px solid ${C.border}`, color:'#fff', padding:12, borderRadius:8, marginBottom:12, outline:'none' }}
-        />
-        {err && <div style={{ color:C.red, fontSize:12, marginBottom:12 }}>{err}</div>}
-        <button onClick={handleWithdraw} disabled={loading} style={{ width:'100%', background:C.red, border:'none', color:'#fff', padding:13, borderRadius:8, fontWeight:900, cursor:'pointer' }}>
-          {loading ? 'PROCESSING...' : 'REQUEST WITHDRAWAL'}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // Minimum deposit is KES 50 (not 99)
 function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
@@ -1271,8 +1226,8 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
     const n = parseFloat(amt)
     const p = phone.trim();
 
-    if (!amt || isNaN(n) || n < 49 || n > 500000) {
-      setErr('Enter an amount between 49 and 500,000')
+    if (!amt || isNaN(n) || n < 10 || n > 500000) {
+      setErr('Enter an amount between 10 and 500,000')
       return
     }
     if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) {
@@ -1340,7 +1295,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
           <span style={{ fontWeight:900, fontSize:18, color:'#fff' }}>Deposit</span>
           <span onClick={onClose} style={{ cursor:'pointer', color:C.muted, fontSize:24, lineHeight:1 }}>×</span>
         </div>
-        <p style={{ color:C.textDim, fontSize:12, margin:'0 0 14px' }}>Minimum deposit is KES 49</p>
+        <p style={{ color:C.textDim, fontSize:12, margin:'0 0 14px' }}>Send money into your Aviator account</p>
         <div style={{ display:'flex', gap:16, marginBottom:14, padding:'0 4px' }}>
           {[100,200,500,1000].map(v => (
             <span key={v} onClick={() => { setAmt(String(v)); setErr('') }} style={{
@@ -1367,7 +1322,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
           <input
             max={500000}
             type="number"
-            placeholder="Amount (min KES 49)"
+            placeholder="Amount (min KES 10)"
             value={amt}
             onChange={e => { setAmt(e.target.value); setErr('') }}
             style={{
@@ -1379,7 +1334,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         </div>
 
         {err && <div style={{ color:'#ef4444', fontSize:11, marginBottom:8 }}>{err}</div>}
-        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 49. All transactions are subject to 5% tax.</div>
+        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 10. All transactions are subject to 5% tax.</div>
         <button onClick={handlePay} disabled={loading} style={{ width:'100%', background:C.greenDark, border:'none', color:'#fff', padding:'13px 0', borderRadius:8, fontWeight:900, fontSize:14, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
           <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>M</div>
           {loading ? 'PROCESSING...' : 'Pay with M-Pesa'}
@@ -1615,25 +1570,23 @@ function BetPanel({ slot, phase, currentMult, onAction, showClose, onClose }) {
         </button>
       </div>
 
-      {/* Quick stakes — 2x2 grid matching Betika layout */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 6, borderTop:`1px solid ${C.border}`, paddingTop:10, paddingBottom: 4 }}>
+      {/* Quick stakes — single row with pipe separators, exactly as screenshot */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', borderTop:`1px solid ${C.border}`, paddingTop:6 }}>
         {[100, 250, 1000, 25000].map((v, i) => (
           <div
             key={v}
             onClick={() => !inputDis && setAmount(v)}
             style={{
               textAlign:'center',
-              fontSize:12, fontWeight:700,
-              color: inputDis ? '#374151' : '#fff',
+              fontSize:11, fontWeight:600,
+              color: inputDis ? '#374151' : C.textDim,
               cursor: inputDis ? 'not-allowed' : 'pointer',
-              padding:'8px 0',
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${C.border}`,
-              borderRadius: 6,
+              padding:'3px 0',
+              borderLeft: i > 0 ? `1px solid ${C.border}` : 'none',
               userSelect:'none',
             }}
           >
-            {v >= 1000 ? `${(v/1000).toLocaleString()}k` : v}
+            {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
           </div>
         ))}
       </div>
@@ -1787,7 +1740,6 @@ export default function App() {
   })
   const [showChat,     setShowChat]     = useState(false)
   const [showDeposit,  setShowDeposit]  = useState(false)
-  const [showWithdraw, setShowWithdraw] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showFair,     setShowFair]     = useState(false)
   const [showFooter,   setShowFooter]   = useState(false)
@@ -1820,10 +1772,9 @@ export default function App() {
   useEffect(() => { botsRef.current  = bots  }, [bots])
 
   const handleAuthSuccess = (user) => {
-    localStorage.setItem('aviator_user', JSON.stringify(user));
     setUserPhone(user.phone);
     setIsAdmin(user.phone === ADMIN_PHONE_UI);
-    setAuthToken(user.token);
+    setAuthToken(user.token); // Secure JWT from backend
     setBal(user.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
@@ -1846,19 +1797,6 @@ export default function App() {
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 720)
     window.addEventListener('resize', onResize)
-
-    const saved = localStorage.getItem('aviator_user');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        setUserPhone(u.phone);
-        setAuthToken(u.token);
-        setBal(u.balance);
-        setIsAdmin(u.phone === ADMIN_PHONE_UI);
-        setIsLoggedIn(true);
-      } catch (e) { localStorage.removeItem('aviator_user'); }
-    }
-
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
@@ -2006,7 +1944,7 @@ export default function App() {
 
       // If round is in betting phase, notify server immediately
       if (phase === 'waiting' || phase === 'countdown') {
-        socketRef.current?.emit('placeBet', { amount });
+        socketRef.current?.emit('placeBet', { amount, slotId });
       }
 
       // Keep local balance sync for instant UI feedback
@@ -2021,7 +1959,7 @@ export default function App() {
         return prev.map(x => x.id===slotId ? { ...x, status:'idle', amount:0, autoCashout:null } : x)
       })
     } else if (action === 'cashout') {
-      socketRef.current?.emit('cashOut'); // CRITICAL: Signal server to save winnings
+      socketRef.current?.emit('cashOut', { slotId }); // CRITICAL: Signal server to save winnings
       doCashout(slotId, multRef.current)
     }
   }, [doCashout, showError])
@@ -2092,20 +2030,15 @@ export default function App() {
       {/* Nav — Aviator branded */}
       <AviatorNav
         isLoggedIn={isLoggedIn}
-        onLogin={()=>{ if(isLoggedIn) { localStorage.removeItem('aviator_user'); setIsLoggedIn(false); setBal(0); } else setShowLogin(true) }}
+        onLogin={()=>{ if(isLoggedIn) setIsLoggedIn(false); else setShowLogin(true) }}
         onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
         onLogoClick={handleLogoClick}
       />
+      <GoBackBar/>
 
       {/* Game sub-header */}
-      <GameSubHeader 
-        bal={bal} 
-        onSettings={()=>setShowSettings(p=>!p)} 
-        onChat={()=>setShowChat(p=>!p)} 
-        showChat={showChat}
-        onBalanceClick={() => isLoggedIn && setShowWithdraw(true)}
-      />
+      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat}/>
 
       {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 
@@ -2114,9 +2047,7 @@ export default function App() {
 
         {/* Sidebar */}
         {!isMobile && (
-          <div style={{ width: 220, flexShrink: 0, borderRight:`1px solid ${C.border}` }}>
-            <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
-          </div>
+          <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
         )}
         {isMobile && showSidebar && (
           <>
@@ -2128,7 +2059,7 @@ export default function App() {
         )}
 
         {/* Game column */}
-        <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY: isMobile ? 'auto' : 'hidden', overflowX: 'hidden', minWidth:0 }} className="hide-scroll">
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
           {/* History bar */}
           <div style={{ height:36, background:C.panel, borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:6, padding:'0 8px', flexShrink:0 }}>
@@ -2158,13 +2089,7 @@ export default function App() {
           <div className="rainbow-line" style={{ flexShrink:0 }}/>
 
           {/* Canvas + overlays */}
-          <div style={{ 
-            flex: isMobile ? 'none' : 1, 
-            height: isMobile ? '42vw' : 'auto',
-            minHeight: isMobile ? '220px' : 0,
-            position:'relative', 
-            overflow:'hidden' 
-          }}>
+          <div style={{ flex:1, position:'relative', overflow:'hidden', minHeight:0 }}>
             <GameCanvas 
               phase={phase} 
               multiplierRef={multRef} 
@@ -2196,9 +2121,6 @@ export default function App() {
             <BetPanel slot={slots[1]} phase={phase} currentMult={mult} onAction={handleBetAction}/>
           </div>
 
-          {/* Mobile All Bets List — Renders below bet panels on mobile */}
-          {isMobile && <div style={{ flexShrink:0, height:400, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
-
           {/* Bottom bar */}
           <div style={{ height:26, background:'#0a0b10', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', flexShrink:0 }}>
             <span onClick={()=>setShowFair(true)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>🛡️ Provably Fair Game</span>
@@ -2209,16 +2131,6 @@ export default function App() {
 
           {showFooter && <AviatorFooter onHide={()=>setShowFooter(false)}/>}
         </div>
-
-        {showWithdraw && (
-          <WithdrawalModal
-            onClose={()=>setShowWithdraw(false)}
-            isLoggedIn={isLoggedIn}
-            balance={bal}
-            phone={userPhone}
-            token={authToken}
-          />
-        )}
 
         {/* Chat */}
         {showChat && !isMobile && <ChatPanel messages={chatMsgs} onClose={()=>setShowChat(false)}/>}

@@ -2126,7 +2126,7 @@ export default function App() {
         {/* Sidebar */}
         {!isMobile && (
           <div style={{ width: 220, flexShrink: 0, borderRight:`1px solid ${C.border}` }}>
-            <Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+            <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
           </div>
         )}
         {isMobile && showSidebar && (
@@ -2208,14 +2208,7 @@ export default function App() {
           </div>
 
           {/* Mobile All Bets List — Renders below bet panels on mobile */}
-          {isMobile && (
-            <div style={{ flexShrink:0, borderTop:`1px solid ${C.border}`, background: C.sidebar }}>
-              <Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
-            </div>
-          )}
-
-          {/* Mobile All Bets at the bottom */}
-          {isMobile && <div style={{ flexShrink:0, height:300, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
+          {isMobile && <div style={{ flexShrink:0, height:400, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
 
           {/* Bottom bar */}
           <div style={{ height:26, background:'#0a0b10', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', flexShrink:0 }}>

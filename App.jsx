@@ -284,6 +284,8 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       g.addColorStop(0, 'rgba(30, 30, 30, 0.12)'); // Dark grey for radial gradient
       g.addColorStop(1, 'rgba(0,0,0,0)');
       bctx.fillStyle = g;
+      // Fill with solid dark background only
+      bctx.fillStyle = C.bg;
       bctx.fillRect(0, 0, W, H);
     }
 

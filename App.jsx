@@ -86,7 +86,7 @@ function SplashScreen() {
       aria-live="polite"
       aria-label="Loading application"
       style={{
-        position:'fixed', inset:0, background:'#000', zIndex:9999,
+        position:'fixed', top:0, right:0, bottom:0, left:0, background:'#000', zIndex:9999,
         display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
         fontFamily:'Arial,sans-serif',
       }}>

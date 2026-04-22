@@ -268,23 +268,7 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const bctx = cache.getContext('2d');
       bctx.scale(dpr, dpr);
 
-      // Draw Sunburst (Bézier-style rays)
-      const sx = W * 0.02, sy = H * 1.08;
-      const len = Math.hypot(W * 1.1, H * 1.1) * 2;
-      const N = 36, a0 = -Math.PI * 1.08, a1 = -Math.PI * 0.01;
-      for (let i = 0; i < N; i++) {
-        const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
-        bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
-        bctx.fillStyle = i % 2 === 0 ? 'rgba(30, 30, 30, 0.02)' : 'rgba(30, 30, 30, 0.01)'; // Dark grey for sunburst rays
-        bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
-        bctx.restore();
-      }
-      // Draw Spotlight (Deep Radial Gradient)
-      const g = bctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
-      g.addColorStop(0, 'rgba(30, 30, 30, 0.12)'); // Dark grey for radial gradient
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      bctx.fillStyle = g;
-      // Fill with solid dark background only
+      // Entirely dark background as requested
       bctx.fillStyle = C.bg;
       bctx.fillRect(0, 0, W, H);
     }
@@ -692,7 +676,7 @@ function WaitingOverlay({ phase }) {
 }
 
 // ─── GAME SUB-HEADER ──────────────────────────────────────────────────────────
-function GameSubHeader({ bal, onSettings, onChat, showChat, onWithdraw }) {
+function GameSubHeader({ bal, onSettings, onChat, showChat, onBalanceClick }) {
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -700,8 +684,9 @@ function GameSubHeader({ bal, onSettings, onChat, showChat, onWithdraw }) {
     }}>
       <span style={{ color:C.red, fontWeight:900, fontSize:15, fontStyle:'italic', fontFamily:'"Arial Black",Arial' }}>✈ Aviator</span>
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        <button onClick={onWithdraw} style={{ background:C.red, border:'none', color:'#fff', padding:'3px 8px', borderRadius:4, fontSize:10, fontWeight:800, cursor:'pointer' }}>WITHDRAW</button>
-        <AnimBalance value={bal} />
+        <div onClick={onBalanceClick} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <AnimBalance value={bal} />
+        </div>
         <span onClick={onSettings} style={{
           color:C.muted, fontSize:18, cursor:'pointer', userSelect:'none',
           lineHeight:1, padding:'2px 4px',
@@ -2107,15 +2092,20 @@ export default function App() {
       {/* Nav — Aviator branded */}
       <AviatorNav
         isLoggedIn={isLoggedIn}
-        onLogin={()=>{ if(isLoggedIn) { localStorage.removeItem('aviator_user'); setIsLoggedIn(false); } else setShowLogin(true) }}
+        onLogin={()=>{ if(isLoggedIn) { localStorage.removeItem('aviator_user'); setIsLoggedIn(false); setBal(0); } else setShowLogin(true) }}
         onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
         onLogoClick={handleLogoClick}
       />
-      <GoBackBar/>
 
       {/* Game sub-header */}
-      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat} onWithdraw={() => setShowWithdraw(true)}/>
+      <GameSubHeader 
+        bal={bal} 
+        onSettings={()=>setShowSettings(p=>!p)} 
+        onChat={()=>setShowChat(p=>!p)} 
+        showChat={showChat}
+        onBalanceClick={() => isLoggedIn && setShowWithdraw(true)}
+      />
 
       {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 

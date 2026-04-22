@@ -276,12 +276,13 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         const a = a0 + (i / N) * (a1 - a0), half = len * 0.075;
         bctx.save(); bctx.translate(sx, sy); bctx.rotate(a);
         bctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.005)';
+        bctx.fillStyle = i % 2 === 0 ? 'rgba(168, 85, 247, 0.02)' : 'rgba(168, 85, 247, 0.01)';
         bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(-half,-len); bctx.lineTo(half,-len); bctx.closePath(); bctx.fill();
         bctx.restore();
       }
       // Draw Spotlight (Deep Radial Gradient)
       const g = bctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W);
-      g.addColorStop(0, 'rgba(180, 20, 30, 0.06)');
+      g.addColorStop(0, 'rgba(225, 29, 40, 0.12)');
       g.addColorStop(1, 'rgba(0,0,0,0)');
       bctx.fillStyle = g;
       bctx.fillRect(0, 0, W, H);
@@ -423,7 +424,7 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const c = fctx.current;
       if (!c) return;
 
-      c.fillStyle = '#05060b';
+      c.fillStyle = '#080510';
       c.fillRect(0, 0, W, H);
       if (bgCache.current) {
         c.save();
@@ -512,14 +513,14 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         planeAngle = Math.max(-0.43, Math.min(0.20, planeAngle))
         const displayMult = predictedMult.toFixed(2) + 'x';
         const fontSize = W < 720 ? 58 : 92;
-        c.fillStyle = '#fff';
+        c.fillStyle = '#ffffff';
         c.font = `900 ${fontSize}px "Arial Black", Arial`;
         c.textAlign = 'center';
         c.textBaseline = 'middle';
         if (!lowPerf) {
-          c.shadowColor = 'rgba(0,0,0,0.8)';
-          c.shadowBlur = 10;
-          c.shadowOffsetY = 2;
+          c.shadowColor = 'rgba(0,0,0,0.95)';
+          c.shadowBlur = 18;
+          c.shadowOffsetY = 4;
         }
         c.save(); // Save context before applying text-specific styles
         // Place text in the middle of the screen slightly up
@@ -753,7 +754,7 @@ function Sidebar({ bets, prevBets, activeTab, onTab, totalCount }) {
   const topBets     = [...bets].sort((a,b) => (b.win||0)-(a.win||0))
   const list        = activeTab==='all' ? sortedBets : activeTab==='previous' ? sortedPrev : topBets
   return (
-    <aside style={{ width:'100%', maxWidth:220, background:C.sidebar, borderRight:`1px solid ${C.border}`, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
+    <aside style={{ width:'100%', height:'100%', background:C.sidebar, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}` }}>
         {[['all','ALL BETS'],['previous','PREVIOUS'],['top','TOP']].map(([k,lbl]) => (
           <div key={k} onClick={() => onTab(k)} style={{
@@ -1629,23 +1630,25 @@ function BetPanel({ slot, phase, currentMult, onAction, showClose, onClose }) {
         </button>
       </div>
 
-      {/* Quick stakes — single row with pipe separators, exactly as screenshot */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', borderTop:`1px solid ${C.border}`, paddingTop:6 }}>
+      {/* Quick stakes — 2x2 grid matching Betika layout */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 6, borderTop:`1px solid ${C.border}`, paddingTop:10, paddingBottom: 4 }}>
         {[100, 250, 1000, 25000].map((v, i) => (
           <div
             key={v}
             onClick={() => !inputDis && setAmount(v)}
             style={{
               textAlign:'center',
-              fontSize:11, fontWeight:600,
-              color: inputDis ? '#374151' : C.textDim,
+              fontSize:12, fontWeight:700,
+              color: inputDis ? '#374151' : '#fff',
               cursor: inputDis ? 'not-allowed' : 'pointer',
-              padding:'3px 0',
-              borderLeft: i > 0 ? `1px solid ${C.border}` : 'none',
+              padding:'8px 0',
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${C.border}`,
+              borderRadius: 6,
               userSelect:'none',
             }}
           >
-            {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+            {v >= 1000 ? `${(v/1000).toLocaleString()}k` : v}
           </div>
         ))}
       </div>
@@ -2121,7 +2124,9 @@ export default function App() {
 
         {/* Sidebar */}
         {!isMobile && (
-          <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+          <div style={{ width: 220, flexShrink: 0, borderRight:`1px solid ${C.border}` }}>
+            <Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+          </div>
         )}
         {isMobile && showSidebar && (
           <>
@@ -2133,7 +2138,7 @@ export default function App() {
         )}
 
         {/* Game column */}
-        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY: isMobile ? 'auto' : 'hidden', overflowX: 'hidden', minWidth:0 }} className="hide-scroll">
 
           {/* History bar */}
           <div style={{ height:36, background:C.panel, borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:6, padding:'0 8px', flexShrink:0 }}>
@@ -2163,7 +2168,13 @@ export default function App() {
           <div className="rainbow-line" style={{ flexShrink:0 }}/>
 
           {/* Canvas + overlays */}
-          <div style={{ flex:1, position:'relative', overflow:'hidden', minHeight:0 }}>
+          <div style={{ 
+            flex: isMobile ? 'none' : 1, 
+            height: isMobile ? '42vw' : 'auto',
+            minHeight: isMobile ? '220px' : 0,
+            position:'relative', 
+            overflow:'hidden' 
+          }}>
             <GameCanvas 
               phase={phase} 
               multiplierRef={multRef} 
@@ -2195,7 +2206,6 @@ export default function App() {
             <BetPanel slot={slots[1]} phase={phase} currentMult={mult} onAction={handleBetAction}/>
           </div>
 
-          {/* Mobile All Bets at the bottom */}
           {isMobile && <div style={{ flexShrink:0, height:300, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
 
           {/* Bottom bar */}

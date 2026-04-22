@@ -424,7 +424,6 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const c = fctx.current;
       if (!c) return;
 
-      c.fillStyle = '#080510';
       c.fillRect(0, 0, W, H);
       if (bgCache.current) {
         c.save();
@@ -513,6 +512,7 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         planeAngle = Math.max(-0.43, Math.min(0.20, planeAngle))
         const displayMult = predictedMult.toFixed(2) + 'x';
         const fontSize = W < 720 ? 58 : 92;
+        c.fillStyle = '#fff';
         c.fillStyle = '#ffffff';
         c.font = `900 ${fontSize}px "Arial Black", Arial`;
         c.textAlign = 'center';
@@ -1648,6 +1648,7 @@ function BetPanel({ slot, phase, currentMult, onAction, showClose, onClose }) {
               userSelect:'none',
             }}
           >
+            {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
             {v >= 1000 ? `${(v/1000).toLocaleString()}k` : v}
           </div>
         ))}
@@ -2206,6 +2207,14 @@ export default function App() {
             <BetPanel slot={slots[1]} phase={phase} currentMult={mult} onAction={handleBetAction}/>
           </div>
 
+          {/* Mobile All Bets List — Renders below bet panels on mobile */}
+          {isMobile && (
+            <div style={{ flexShrink:0, borderTop:`1px solid ${C.border}`, background: C.sidebar }}>
+              <Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+            </div>
+          )}
+
+          {/* Mobile All Bets at the bottom */}
           {isMobile && <div style={{ flexShrink:0, height:300, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBets} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
 
           {/* Bottom bar */}

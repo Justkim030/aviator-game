@@ -2063,6 +2063,19 @@ export default function App() {
   }, [])
 
   if (loading) return <SplashScreen/>
+  
+  // Debug: Show error bar if set
+  if (errorBar) {
+    return (
+      <div style={{ height:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:C.bg, color:C.red, fontFamily:'Arial,sans-serif' }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:24, marginBottom:20 }}>Connection Error</div>
+          <div style={{ color:C.textDim }}>{errorBar}</div>
+        </div>
+      </div>
+    )
+  }
+  
   if (showRegister) return (
     <RegisterPage
       onBack={()=>setShowRegister(false)}

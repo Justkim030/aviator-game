@@ -409,6 +409,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
     const render = () => {
       raf = requestAnimationFrame(render)
 
+      const c = fctx.current;
+      if (!c) return;
+
       const now = performance.now()
       const dt = (now - lastFrameTime.current) / 1000 // delta in seconds
       lastFrameTime.current = now
@@ -440,6 +443,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       c.strokeStyle = 'rgba(255,255,255,0.35)'
       c.lineWidth = 1.5; c.setLineDash([])
       c.beginPath(); c.moveTo(ox-6, oy); c.lineTo(W-8, oy); c.stroke()
+      c.strokeStyle = 'rgba(255,255,255,0.07)'; c.lineWidth = 1; c.setLineDash([3,10])
+      c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox, 16); c.stroke()
+      c.setLineDash([])
       c.fillStyle = 'rgba(255,255,255,0.35)'
       c.beginPath(); c.arc(ox, oy, 3, 0, Math.PI*2); c.fill()
 
@@ -685,16 +691,16 @@ function WaitingOverlay({ phase }) {
 }
 
 // ─── GAME SUB-HEADER ──────────────────────────────────────────────────────────
-function GameSubHeader({ bal, onSettings, onChat, showChat, onBalanceClick }) {
+function GameSubHeader({ bal, onSettings, onChat, showChat }) {
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
       padding:'4px 10px', background:C.panel, borderBottom:`1px solid ${C.border}`, flexShrink:0,
     }}>
       <span style={{ color:C.red, fontWeight:900, fontSize:15, fontStyle:'italic', fontFamily:'"Arial Black",Arial' }}>✈ Aviator</span>
-      <div onClick={onBalanceClick} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
         <AnimBalance value={bal} />
-        <span onClick={(e) => { e.stopPropagation(); onSettings(); }} style={{
+        <span onClick={onSettings} style={{
           color:C.muted, fontSize:18, cursor:'pointer', userSelect:'none',
           lineHeight:1, padding:'2px 4px',
         }}>≡</span>
@@ -1211,73 +1217,6 @@ function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
   )
 }
 
-// ─── WITHDRAWAL MODAL ─────────────────────────────────────────────────────────
-function WithdrawalModal({ onClose, isLoggedIn, onLoginRedirect, balance, phone, token }) {
-  const [amt, setAmt] = useState('')
-  const [err, setErr] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleWithdraw = async () => {
-    const n = parseFloat(amt)
-    if (isNaN(n) || n < 100) return setErr('Minimum withdrawal is KES 100')
-    if (n > balance) return setErr('Insufficient balance')
-
-    setLoading(true)
-    setErr('')
-    try {
-      const response = await fetch(`${API_URL}/api/withdraw`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ amount: n, phone })
-      })
-      const data = await response.json()
-      if (data.status) {
-        alert('Withdrawal request received! Your balance will update once approved.');
-        onClose()
-      } else {
-        setErr(data.message)
-      }
-    } catch (e) {
-      setErr('Connection error. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!isLoggedIn) return null;
-
-  return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:210, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:'#1a1b2e', borderRadius:12, padding:'24px', width:380, maxWidth:'93vw', border:`1px solid ${C.border}`, fontFamily:'Arial,sans-serif' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-          <span style={{ fontWeight:900, fontSize:18, color:'#fff' }}>Withdraw Funds</span>
-          <span onClick={onClose} style={{ cursor:'pointer', color:C.muted, fontSize:24 }}>×</span>
-        </div>
-        <div style={{ background:'rgba(255,255,255,0.05)', padding:12, borderRadius:8, marginBottom:16 }}>
-          <div style={{ fontSize:11, color:C.textDim }}>Available Balance</div>
-          <div style={{ fontSize:18, fontWeight:800, color:C.green }}>KES {balance.toFixed(2)}</div>
-        </div>
-        <div style={{ marginBottom:16 }}>
-          <label style={{ fontSize:12, color:C.textDim, display:'block', marginBottom:6 }}>Withdrawal Amount (KES)</label>
-          <input
-            type="number"
-            placeholder="Min 100"
-            value={amt}
-            onChange={e => setAmt(e.target.value)}
-            style={{ width:'100%', background:'transparent', border:`1px solid ${C.border}`, color:'#fff', padding:'12px', borderRadius:6, outline:'none' }}
-          />
-        </div>
-        {err && <div style={{ color:C.red, fontSize:12, marginBottom:12 }}>{err}</div>}
-        <button onClick={handleWithdraw} disabled={loading} style={{ width:'100%', background:C.red, border:'none', color:'#fff', padding:'14px', borderRadius:8, fontWeight:900, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1 }}>
-          {loading ? 'PROCESSING...' : 'REQUEST WITHDRAWAL'}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // Minimum deposit is KES 50 (not 99)
 function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
@@ -1804,7 +1743,6 @@ export default function App() {
   })
   const [showChat,     setShowChat]     = useState(false)
   const [showDeposit,  setShowDeposit]  = useState(false)
-  const [showWithdraw, setShowWithdraw] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showFair,     setShowFair]     = useState(false)
   const [showFooter,   setShowFooter]   = useState(false)
@@ -1836,29 +1774,11 @@ export default function App() {
   useEffect(() => { balRef.current   = bal   }, [bal])
   useEffect(() => { botsRef.current  = bots  }, [bots])
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('aviator_user');
-    setIsLoggedIn(false);
-    setUserPhone('');
-    setAuthToken('');
-    setBal(0);
-    setIsAdmin(false);
-    setShowWithdraw(false);
-    setShowDeposit(false);
-  }, []);
-
   const handleAuthSuccess = (user) => {
-    const userData = {
-      phone: user.phone,
-      token: user.token,
-      balance: user.balance,
-    };
-    localStorage.setItem('aviator_user', JSON.stringify(userData));
-
-    setUserPhone(userData.phone);
-    setIsAdmin(userData.phone === ADMIN_PHONE_UI);
-    setAuthToken(userData.token); 
-    setBal(userData.balance);
+    setUserPhone(user.phone);
+    setIsAdmin(user.phone === ADMIN_PHONE_UI);
+    setAuthToken(user.token); // Secure JWT from backend
+    setBal(user.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
     setShowRegister(false);
@@ -1880,37 +1800,8 @@ export default function App() {
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 720)
     window.addEventListener('resize', onResize)
-
-    // Restore persistent session from localStorage
-    const saved = localStorage.getItem('aviator_user');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        setUserPhone(u.phone);
-        setAuthToken(u.token);
-        setBal(u.balance);
-        setIsAdmin(u.phone === ADMIN_PHONE_UI);
-        setIsLoggedIn(true);
-      } catch (e) {
-        localStorage.removeItem('aviator_user');
-      }
-    }
-
     return () => window.removeEventListener('resize', onResize)
   }, [])
-
-  // Sync balance changes back to localStorage
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const saved = localStorage.getItem('aviator_user');
-    if (saved) {
-      const u = JSON.parse(saved);
-      if (u.balance !== bal) {
-        u.balance = bal;
-        localStorage.setItem('aviator_user', JSON.stringify(u));
-      }
-    }
-  }, [bal, isLoggedIn]);
 
   const showError = useCallback(msg => {
     setErrorBar(msg)
@@ -2127,16 +2018,6 @@ export default function App() {
           onLoginRedirect={()=>{ setShowDeposit(false); setShowLogin(true) }}
         />
       )}
-      {showWithdraw && (
-        <WithdrawalModal
-          onClose={() => setShowWithdraw(false)}
-          isLoggedIn={isLoggedIn}
-          onLoginRedirect={() => { setShowWithdraw(false); setShowLogin(true); }}
-          balance={bal}
-          phone={userPhone}
-          token={authToken}
-        />
-      )}
       {showFair     && <FairnessModal onClose={()=>setShowFair(false)}/>}
       {showSettings && (
         <SettingsMenu
@@ -2152,16 +2033,15 @@ export default function App() {
       {/* Nav — Aviator branded */}
       <AviatorNav
         isLoggedIn={isLoggedIn}
-        onLogin={()=>{ if(isLoggedIn) handleLogout(); else setShowLogin(true) }}
+        onLogin={()=>{ if(isLoggedIn) setIsLoggedIn(false); else setShowLogin(true) }}
         onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
         onLogoClick={handleLogoClick}
-        isMobile={isMobile}
       />
       <GoBackBar/>
 
       {/* Game sub-header */}
-      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat} onBalanceClick={() => setShowWithdraw(true)}/>
+      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat}/>
 
       {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 

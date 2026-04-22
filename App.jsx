@@ -409,7 +409,7 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
     const render = () => {
       raf = requestAnimationFrame(render)
 
-      const c = fctx.current;
+      const c = fctx.current; // Define 'c' for the offscreen buffer context
       if (!c) return;
 
       const now = performance.now()

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
 
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
@@ -1705,6 +1705,40 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
   )
 }
 
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error("Uncaught error:", error, errorInfo);
+    this.setState({ error, errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return (
+        <div style={{ position: 'fixed', inset: 0, background: '#222', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', padding: 20 }}>
+          <h1 style={{ color: '#e11d28' }}>Oops! Something went wrong.</h1>
+          <p>We're sorry for the inconvenience. Please try refreshing the page.</p>
+          {/* For debugging, you might want to show error details */}
+          {/* <details style={{ whiteSpace: 'pre-wrap', marginTop: 20, maxWidth: '80%', overflow: 'auto', border: '1px solid #444', padding: 10 }}><summary>Error Details</summary>{this.state.error && this.state.error.toString()}<br />{this.state.errorInfo && this.state.errorInfo.componentStack}</details> */}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [loading,      setLoading]      = useState(true)
@@ -1987,6 +2021,11 @@ export default function App() {
 
   return (
     <div style={{ height:'100dvh', display:'flex', flexDirection:'column', background:C.bg, color:'#fff', fontFamily:'Arial,sans-serif', overflow:'hidden' }}>
+    {/* 
+      Wrap the entire application with an ErrorBoundary to catch unexpected runtime errors.
+      This prevents the whole UI from crashing and provides a fallback.
+    */}
+    <ErrorBoundary>
       <style>{`
         *{box-sizing:border-box}
         .hide-scroll::-webkit-scrollbar{display:none}
@@ -2135,6 +2174,7 @@ export default function App() {
         {/* Chat */}
         {showChat && !isMobile && <ChatPanel messages={chatMsgs} onClose={()=>setShowChat(false)}/>}
       </div>
+    </ErrorBoundary>
     </div>
   )
 }

@@ -1783,33 +1783,6 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
   const [onlineCount, setOnlineCount] = useState(0)
-  const [targetPhone, setTargetPhone] = useState('')
-  const [newBalance, setNewBalance] = useState('')
-  const [adminMsg, setAdminMsg] = useState({ text: '', isError: false })
-
-  const handleUpdateBalance = async () => {
-    if (!targetPhone || !newBalance) return;
-    setAdminMsg({ text: 'Processing...', isError: false });
-    try {
-      const res = await fetch(`${API_URL}/api/admin/update-balance`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ phone: targetPhone, balance: newBalance })
-      });
-      const result = await res.json();
-      if (result.status) {
-        setAdminMsg({ text: `Success: ${result.message}`, isError: false });
-        setTargetPhone(''); setNewBalance('');
-      } else {
-        setAdminMsg({ text: result.message || 'Update failed', isError: true });
-      }
-    } catch (e) {
-      setAdminMsg({ text: 'Connection error', isError: true });
-    }
-  };
 
   useEffect(() => {
     setLoading(true)
@@ -1834,37 +1807,6 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
             <button onClick={() => setRefreshKey(p => p + 1)} style={{ background:C.yellow, color:'#000', border:'none', borderRadius:4, padding:'4px 10px', fontSize:11, fontWeight:800, cursor:'pointer' }}>REFRESH</button>
           </div>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
-        </div>
-
-        {/* Balance Management Section */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8, marginBottom: 24, border: `1px solid ${C.border}` }}>
-          <h3 style={{ color: '#fff', fontSize: 14, margin: '0 0 12px' }}>Update User Balance</h3>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <input 
-              placeholder="Phone (254...)" 
-              value={targetPhone}
-              onChange={e => setTargetPhone(e.target.value)}
-              style={{ flex: 1, minWidth: 150, background: '#0a0b10', border: `1px solid ${C.border}`, color: '#fff', padding: 10, borderRadius: 6, fontSize: 13, outline: 'none' }}
-            />
-            <input 
-              type="number"
-              placeholder="New Balance" 
-              value={newBalance}
-              onChange={e => setNewBalance(e.target.value)}
-              style={{ width: 120, background: '#0a0b10', border: `1px solid ${C.border}`, color: '#fff', padding: 10, borderRadius: 6, fontSize: 13, outline: 'none' }}
-            />
-            <button 
-              onClick={handleUpdateBalance}
-              style={{ background: C.green, color: '#fff', border: 'none', padding: '0 20px', borderRadius: 6, fontWeight: 800, cursor: 'pointer', fontSize: 12 }}
-            >
-              UPDATE
-            </button>
-          </div>
-          {adminMsg.text && (
-            <div style={{ marginTop: 10, fontSize: 11, color: adminMsg.isError ? C.red : C.green, fontWeight: 700 }}>
-              {adminMsg.text}
-            </div>
-          )}
         </div>
 
         {loading ? <p>Loading future rounds...</p> : (

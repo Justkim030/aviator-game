@@ -1979,8 +1979,8 @@ export default function App() {
     setSlots(prev => {
       const slot = prev.find(s => s.id === slotId)
       if (!slot || slot.status !== 'active') return prev
-      const win = slot.amount * atMult
-      setBal(b => { const n = b+win; balRef.current = n; return n })
+      // Note: We no longer manually update 'bal' here. 
+      // The server will send a 'balanceUpdate' event which is the source of truth.
       return prev.map(s => s.id === slotId ? { ...s, status:'idle', amount:0, autoCashout:null } : s)
     })
   }, [])
@@ -2123,9 +2123,10 @@ export default function App() {
       setSlots(prev => prev.map(s => s.id===slotId
         ? { ...s, status:'queued', amount, autoCashout:opts.autoCashout, autoBet:opts.autoBet } : s))
     } else if (action === 'cancel') {
+      socketRef.current?.emit('cancelBet', { slotId }); // Inform server to refund DB
       setSlots(prev => {
         const s = prev.find(x => x.id===slotId)
-        if (s) setBal(b => { const n = b+s.amount; balRef.current = n; return n })
+        // Local bal will be updated when the server emits 'balanceUpdate' following the refund
         return prev.map(x => x.id===slotId ? { ...x, status:'idle', amount:0, autoCashout:null } : x)
       })
     } else if (action === 'cashout') {

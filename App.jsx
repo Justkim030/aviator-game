@@ -745,13 +745,16 @@ function GameSubHeader({ bal, onSettings, onChat, showChat, onBalanceClick }) {
       padding:'4px 10px', background:C.panel, borderBottom:`1px solid ${C.border}`, flexShrink:0,
     }}>
       <span style={{ color:C.red, fontWeight:900, fontSize:15, fontStyle:'italic', fontFamily:'"Arial Black",Arial' }}>✈ Aviator</span>
-      <div onClick={onBalanceClick} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
-        <AnimBalance value={bal} />
+      <div onClick={onBalanceClick} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.03)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <AnimBalance value={bal} />
+          <span style={{ fontSize: 8, color: C.green, fontWeight: 800, marginTop: -2 }}>WITHDRAW</span>
+        </div>
         <span onClick={(e) => { e.stopPropagation(); onSettings(); }} style={{
           color:C.muted, fontSize:18, cursor:'pointer', userSelect:'none',
           lineHeight:1, padding:'2px 4px',
         }}>≡</span>
-        <span onClick={onChat} style={{
+        <span onClick={(e) => { e.stopPropagation(); onChat(); }} style={{
           color: showChat ? '#fff' : C.muted,
           fontSize:14, cursor:'pointer', userSelect:'none',
           background: showChat ? C.card : 'transparent',
@@ -1288,7 +1291,7 @@ function WithdrawalModal({ onClose, isLoggedIn, onLoginRedirect, balance, phone,
       })
       const data = await response.json()
       if (data.status) {
-        setShowWithdraw(false); // Close modal on success
+        onClose(); // Use the passed prop, not the state from App
       } else {
         setErr(data.message)
       }
@@ -2213,7 +2216,7 @@ export default function App() {
       <GoBackBar/>
 
       {/* Game sub-header */}
-      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat} onBalanceClick={() => setShowWithdraw(true)}/>
+      <GameSubHeader bal={bal} onSettings={()=>setShowSettings(p=>!p)} onChat={()=>setShowChat(p=>!p)} showChat={showChat} onBalanceClick={() => isLoggedIn ? setShowWithdraw(true) : setShowLogin(true)}/>
 
       {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 

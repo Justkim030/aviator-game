@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const Withdraw = ({ currentBalance, onClose, onWithdrawSuccess }) => {
+const Withdraw = ({ currentBalance, onClose, onWithdrawSuccess, token }) => {
     const [phone, setPhone] = useState('');
     const [amount, setAmount] = useState('');
     const [loading, setLoading] = useState(false);
@@ -32,7 +32,10 @@ const Withdraw = ({ currentBalance, onClose, onWithdrawSuccess }) => {
         try {
             const response = await fetch(`${API_URL}/api/withdraw`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
                 body: JSON.stringify({
                     amount: n,
                     phone: p

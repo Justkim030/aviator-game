@@ -175,7 +175,7 @@ const NAV_ITEMS = [
   { label:'App' },
 ]
 
-function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, isMobile }) {
+function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, onMyBetsClick, isMobile }) {
   return (
     <div style={{ background:'#0d0f18', borderBottom:`1px solid ${C.border}`, flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       {/* Top row */}
@@ -205,6 +205,7 @@ function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, i
           <div style={{ width:1, height:18, background:C.border }}/>
           <span style={{ color:C.textDim, fontSize:11, cursor:'pointer' }}>🔔</span>
           <span style={{ color:C.textDim, fontSize:11, cursor:'pointer' }}>My Bets</span>
+          <span onClick={onMyBetsClick} style={{ color:C.textDim, fontSize:11, cursor:'pointer', userSelect:'none' }}>My Bets</span>
           <span onClick={onLogin} style={{ color:C.textDim, fontSize:11, cursor:'pointer' }}>
             {isLoggedIn ? 'Profile' : 'Login'}
           </span>
@@ -2055,7 +2056,7 @@ export default function App() {
     });
   };
 
-  const handleSpribeClick = () => {
+  const handleMyBetsClick = () => {
     if (!isAdmin) return;
     setBalClicks(prev => {
       const next = prev + 1;
@@ -2347,6 +2348,7 @@ export default function App() {
         onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
         onLogoClick={handleLogoClick}
+        onMyBetsClick={handleMyBetsClick}
         isMobile={isMobile}
       />
       <GoBackBar/>
@@ -2459,11 +2461,8 @@ export default function App() {
           {/* Bottom bar */}
           <div style={{ height:26, background:'#0a0b10', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', flexShrink:0 }}>
             <span onClick={()=>setShowFair(true)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>🛡️ Provably Fair Game</span>
-            <span onClick={()=>setShowFooter(p=>!p)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}> 
-              Powered by <span 
-                onClick={(e) => { e.stopPropagation(); handleSpribeClick(); }}
-                style={{ color:'#6b7280', fontWeight:400, cursor: isAdmin ? 'pointer' : 'default' }}
-              >SPRIBE</span>
+            <span onClick={()=>setShowFooter(p=>!p)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>
+              Powered by <span style={{ color:'#6b7280', fontWeight:400 }}>SPRIBE</span>
             </span>
           </div>
 

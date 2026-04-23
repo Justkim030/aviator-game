@@ -38,6 +38,56 @@ const BOT_NAMES = [
   '2***7','2***2','2***0','2***8','2***5','2***1','2***9','2***6',
 ]
 const BOT_CHAT = [
+'Maze, hii game inahitaji uvumilivu na discipline, si rahisi kushinda mara moja bila plan 😅',
+  'Hii round iko tricky sana!',
+  'Sometimes nafeel strategy ni muhimu kuliko luck, especially ukiweka limits zako mapema ✨',
+  'Polepole ndio njia, usi-rush.',
+  'Ukianza kuwa overconfident unaweza lose haraka sana, lazima ujue kujidhibiti 💯',
+  'Leo naona game iko soft kidogo.',
+  'Nimejaribu ku-track results zangu na consistency ni ngumu kuliko kupata bahati mara moja 📊',
+  'Kuna mtu anacheza polepole tu?',
+  'Naona setting limits kabla kuanza ni muhimu sana, otherwise unaweza chase losses 🙅🏽‍♂️',
+  'Round hii imekuwa noma kabisa 😂',
+  'Truth be told, hii game inahitaji strategy, timing na kidogo bahati, lakini ukijua when to stop utabaki safe 😊',
+  'Mnaskip rounds ama mnaingia kila moja?',
+  'Sometimes simple strategy inafanya kazi kuliko complex, especially ukiwa disciplined 🔑',
+  'Leo niko tu observer mode.',
+  'Consistency ndio challenge kubwa, bahati huja mara moja lakini discipline ndio hujenga results 🔥',
+  'Hii session imekuwa ngumu bana.',
+  'Kuna rounds zingine zinakaa predictable kabisa halafu zinakushangaza vibaya 🙆🏽‍♂️',
+  'Mimi hu-stay chini ya 3x, safer kidogo.',
+  'Najaribu kuto-rush kila round nowadays, patience ndio weapon kubwa hapa 🚶🏽‍♂️',
+  'Overconfidence inaharibu mambo haraka sana!',
+  'Maze, sometimes nafeel kama patience matters more than luck, bila hiyo unaweza lose vibaya 😅',
+  'Leo bets zangu ni ndogo tu.',
+  'Kuna mtu amecrack strategy ya hii game ama bado tuna trial and error? 🔍',
+  'Hii round imeenda fast sana!',
+  'Naona kudhibiti emotions ndio ngumu zaidi, ukianza kubet na feelings unaharibu discipline yako 💯',
+  'Leo niko na plan ya kuobserve rounds kwanza.',
+  'Nimeona watu wakicheza safe na bado wanafanya poa, si lazima uende big kila time 🔥',
+  'Round hii imekuwa predictable kidogo.',
+  'Mnabadili strategy kila mkipoteza ama mnashikilia moja?',
+  'Sometimes nafeel simple approach ndio best.',
+  'Leo niko disciplined kabisa, hakuna rushing 🚶🏽‍♂️',
+  'Knowing when to stop ndio key hapa, otherwise unaweza chase losses vibaya 🙅🏽‍♂️',
+  'Bado najifunza, lakini polepole na-improve 😊',
+  'Maze, hii game inatest emotions vibaya, lazima ujue kujidhibiti na kujua limits zako 🔑',
+  'Leo niko tu chill mode.',
+  'Kuna mtu anacheza na long-term strategy ama ni short wins pekee? 📊',
+  'Round hii imekuwa noma bana 😂',
+  'Personally, napenda kuanza na small bets kwanza, alafu nikiona pattern iko stable ndio naongeza kidogo kidogo ✨',
+  'Leo bets zangu ziko chini ya 3x.',
+  'Sometimes nafeel consistency ni ngumu kuliko kupata bahati mara moja, discipline ndio inasaidia 🔥',
+  'Leo niko tu observer mode, si lazima kuingia kila round 🙆🏽‍♂️',
+  'Mnaincrease bet mkishinda ama mnabaki constant?',
+  'Hii game inahitaji patience na timing kabisa, bila hiyo unaweza lose haraka sana 😅',
+  'Leo niko na plan ya kujiwekea limits mapema.',
+  'Naona strategy ndio weapon kubwa kuliko luck, otherwise unaweza end up chasing losses 💯',
+  'Round hii imekuwa soft kidogo.',
+  'Mnatrack results zenu ama mnaplay tu bila kujua pattern? 📊',
+  'Leo niko disciplined, hakuna rushing 🚶🏽‍♂️',
+  'Sometimes nafeel simple strategy ndio inafanya kazi kuliko complex 🔑',
+  'Maze, hii game inahitaji kujua when to stop, otherwise unaweza haribu bankroll yako 🙅🏽‍♂️',
   'Sikua naomba hadi nakuna results zakuja ni genius 🙏🙏🙏',
   '0,7,3,4,1,4,5,5,6 nmetoa leo\n55k sal.........r t q',
   'ogodsGuarantee Winnings Aviator Deals, For timi..ngs and acc..ount mana..gement watsap.....0,1,1,1,2,0,8.....',
@@ -419,6 +469,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const rect = canvas.getBoundingClientRect()
       const W = rect.width, H = rect.height
       if (!W || !H) return
+
+      const c = fctx.current;
+      if (!c) return;
 
       // Draw frame to offscreen buffer first (Double Buffering)
       c.fillStyle = '#05060b';
@@ -1235,8 +1288,7 @@ function WithdrawalModal({ onClose, isLoggedIn, onLoginRedirect, balance, phone,
       })
       const data = await response.json()
       if (data.status) {
-        alert('Withdrawal request received! Your balance will update once approved.');
-        onClose()
+        setShowWithdraw(false); // Close modal on success
       } else {
         setErr(data.message)
       }
@@ -1258,7 +1310,7 @@ function WithdrawalModal({ onClose, isLoggedIn, onLoginRedirect, balance, phone,
         </div>
         <div style={{ background:'rgba(255,255,255,0.05)', padding:12, borderRadius:8, marginBottom:16 }}>
           <div style={{ fontSize:11, color:C.textDim }}>Available Balance</div>
-          <div style={{ fontSize:18, fontWeight:800, color:C.green }}>KES {balance.toFixed(2)}</div>
+          <div style={{ fontSize:22, fontWeight:900, color:C.green }}>KES {balance.toFixed(2)}</div>
         </div>
         <div style={{ marginBottom:16 }}>
           <label style={{ fontSize:12, color:C.textDim, display:'block', marginBottom:6 }}>Withdrawal Amount (KES)</label>

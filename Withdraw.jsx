@@ -17,8 +17,8 @@ const Withdraw = ({ currentBalance, onClose, onWithdrawSuccess, token }) => {
             setError('Please enter a valid phone number');
             return;
         }
-        if (!amount || isNaN(n) || n < 10) {
-            setError('Please enter a valid amount (minimum 10 KES)');
+        if (!amount || isNaN(n) || n < 100) {
+            setError('Please enter a valid amount (minimum 100 KES)');
             return;
         }
         if (n > currentBalance) {

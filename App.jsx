@@ -1312,20 +1312,24 @@ function WithdrawalModal({ onClose, isLoggedIn, onLoginRedirect, balance, phone,
         </div>
         <div style={{ background:'rgba(255,255,255,0.05)', padding:12, borderRadius:8, marginBottom:16 }}>
           <div style={{ fontSize:11, color:C.textDim }}>Available Balance</div>
-          <div style={{ fontSize:22, fontWeight:900, color:C.green }}>KES {balance.toFixed(2)}</div>
+          <div style={{ fontSize:24, fontWeight:900, color:C.green }}>KES {balance.toFixed(2)}</div>
         </div>
-        <div style={{ marginBottom:16 }}>
-          <label style={{ fontSize:12, color:C.textDim, display:'block', marginBottom:6 }}>Withdrawal Amount (KES)</label>
+        <div style={{ marginBottom:20 }}>
+          <label style={{ fontSize:12, color:C.textDim, display:'block', marginBottom:8, fontWeight: 700 }}>Withdrawal Amount (KES)</label>
           <input
             type="number"
-            placeholder="Min 100"
+            placeholder="Enter amount (Min 100)"
             value={amt}
             onChange={e => setAmt(e.target.value)}
-            style={{ width:'100%', background:'transparent', border:`1px solid ${C.border}`, color:'#fff', padding:'12px', borderRadius:6, outline:'none' }}
+            style={{ width:'100%', background:'#0f1923', border:`1px solid ${C.border}`, color:'#fff', padding:'14px', borderRadius:8, fontSize: '16px', fontWeight: 800, outline:'none' }}
           />
         </div>
-        {err && <div style={{ color:C.red, fontSize:12, marginBottom:12 }}>{err}</div>}
-        <button onClick={handleWithdraw} disabled={loading} style={{ width:'100%', background:C.red, border:'none', color:'#fff', padding:'14px', borderRadius:8, fontWeight:900, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1 }}>
+        {err && (
+          <div style={{ color:'#fff', background: C.red, fontSize:12, marginBottom:16, padding: '10px', borderRadius: 6, textAlign: 'center', fontWeight: 700 }}>
+            ⚠️ {err}
+          </div>
+        )}
+        <button onClick={handleWithdraw} disabled={loading} style={{ width:'100%', background:C.orange, border:'none', color:'#fff', padding:'16px', borderRadius:8, fontWeight:900, fontSize: '15px', cursor:loading?'not-allowed':'pointer', boxShadow: '0 4px 15px rgba(249,115,22,0.3)' }}>
           {loading ? 'PROCESSING...' : 'REQUEST WITHDRAWAL'}
         </button>
       </div>
@@ -2023,13 +2027,13 @@ export default function App() {
         if (sl.autoBet && sl.status === 'idle') {
           const amount = sl.amount || 10
           if (balRef.current >= amount) {
-            s.emit('placeBet', { amount })
+            s.emit('placeBet', { amount, slotId: sl.id })
             return { ...sl, status: 'queued', amount }
           }
         }
         // Handle automatic betting for manually Queued bets
         if (sl.status === 'queued') {
-          s.emit('placeBet', { amount: sl.amount })
+          s.emit('placeBet', { amount: sl.amount, slotId: sl.id })
           return { ...sl, status: 'active' }
         }
         return sl
@@ -2110,7 +2114,7 @@ export default function App() {
 
       // If round is in betting phase, notify server immediately
       if (phase === 'waiting' || phase === 'countdown') {
-        socketRef.current?.emit('placeBet', { amount });
+        socketRef.current?.emit('placeBet', { amount, slotId });
       }
 
       // Keep local balance sync for instant UI feedback
@@ -2125,7 +2129,7 @@ export default function App() {
         return prev.map(x => x.id===slotId ? { ...x, status:'idle', amount:0, autoCashout:null } : x)
       })
     } else if (action === 'cashout') {
-      socketRef.current?.emit('cashOut'); // CRITICAL: Signal server to save winnings
+      socketRef.current?.emit('cashOut', { slotId }); // CRITICAL: Signal server to save winnings
       doCashout(slotId, multRef.current)
     }
   }, [doCashout, showError])

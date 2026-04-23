@@ -470,16 +470,16 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const W = rect.width, H = rect.height
       if (!W || !H) return
 
-      const drawCtx = fctx.current;
-      if (!drawCtx) return;
+      const c = fctx.current;
+      if (!c) return;
 
-      drawCtx.fillStyle = '#05060b';
-      drawCtx.fillRect(0, 0, W, H);
+      c.fillStyle = '#05060b';
+      c.fillRect(0, 0, W, H);
       if (bgCache.current) {
-        drawCtx.save();
-        drawCtx.setTransform(1, 0, 0, 1, 0, 0); 
-        drawCtx.drawImage(bgCache.current, 0, 0);
-        drawCtx.restore();
+        c.save();
+        c.setTransform(1, 0, 0, 1, 0, 0); 
+        c.drawImage(bgCache.current, 0, 0);
+        c.restore();
       }
 
       // topMargin: enough headroom so the plane (drawn upward from tip) never clips the top edge
@@ -489,11 +489,11 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const t = Date.now() * 0.001
 
       // Axes
-      drawCtx.strokeStyle = 'rgba(255,255,255,0.35)'
-      drawCtx.lineWidth = 1.5; drawCtx.setLineDash([])
-      drawCtx.beginPath(); drawCtx.moveTo(ox-6, oy); drawCtx.lineTo(W-8, oy); drawCtx.stroke()
-      drawCtx.fillStyle = 'rgba(255,255,255,0.35)'
-      drawCtx.beginPath(); drawCtx.arc(ox, oy, 3, 0, Math.PI*2); drawCtx.fill()
+      c.strokeStyle = 'rgba(255,255,255,0.35)'
+      c.lineWidth = 1.5; c.setLineDash([])
+      c.beginPath(); c.moveTo(ox-6, oy); c.lineTo(W-8, oy); c.stroke()
+      c.fillStyle = 'rgba(255,255,255,0.35)'
+      c.beginPath(); c.arc(ox, oy, 3, 0, Math.PI*2); c.fill()
 
       // ── WAITING / COUNTDOWN ──────────────────────────────────────────────────
       if (phase === 'waiting' || phase === 'countdown') {
@@ -504,9 +504,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         // Plane tail sits exactly on the x-axis at origin.
         const taxiX = ox + Math.sin(t * (Math.PI * 2) / 4) * 18
         const taxiAng = Math.sin(t * (Math.PI * 2) / 4) * 0.04 - 0.03
-        drawCtx.beginPath(); drawCtx.moveTo(ox, oy); drawCtx.lineTo(taxiX, oy); drawCtx.strokeStyle = C.red; drawCtx.lineWidth = 3.5; drawCtx.lineCap = 'round'; drawCtx.stroke()
-        drawCtx.beginPath(); drawCtx.arc(ox, oy, 4, 0, Math.PI * 2); drawCtx.fillStyle = C.red; drawCtx.fill() 
-        drawPlane(drawCtx, taxiX, oy, taxiAng)
+        c.beginPath(); c.moveTo(ox, oy); c.lineTo(taxiX, oy); c.strokeStyle = C.red; c.lineWidth = 3.5; c.lineCap = 'round'; c.stroke()
+        c.beginPath(); c.arc(ox, oy, 4, 0, Math.PI * 2); c.fillStyle = C.red; c.fill() 
+        drawPlane(c, taxiX, oy, taxiAng)
         swapBuffers();
         return
       }
@@ -553,25 +553,25 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         frozen.current     = { tx, ty, ox, oy }
         crashPlane.current = { x: tx, y: ty, vx: 10, vy: -2.5, angle: -0.3 }
 
-        const tangentAngle = drawCurve(drawCtx, ox, oy, tx, ty)
+        const tangentAngle = drawCurve(c, ox, oy, tx, ty)
         // Plane angle: Refined rotation for aerodynamic flight
         let planeAngle = tangentAngle * 0.6
         planeAngle = Math.max(-0.43, Math.min(0.20, planeAngle))
         const displayMult = predictedMult.toFixed(2) + 'x';
         const fontSize = W < 720 ? 58 : 92;
-        drawCtx.font = `900 ${fontSize}px "Arial Black", Arial`;
-        drawCtx.textAlign = 'center';
-        drawCtx.textBaseline = 'middle';
+        c.font = `900 ${fontSize}px "Arial Black", Arial`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
         if (!lowPerf) {
-          drawCtx.shadowColor = 'rgba(0,0,0,0.8)';
-          drawCtx.shadowBlur = 10;
-          drawCtx.shadowOffsetY = 2;
+          c.shadowColor = 'rgba(0,0,0,0.8)';
+          c.shadowBlur = 10;
+          c.shadowOffsetY = 2;
         }
-        drawCtx.save();
+        c.save();
         // Place text in the middle of the screen slightly up
-        drawCtx.fillText(displayMult, W / 2, H / 2 - 20);
-        drawCtx.restore();
-        drawPlane(drawCtx, tx, ty, planeAngle) 
+        c.fillText(displayMult, W / 2, H / 2 - 20);
+        c.restore();
+        drawPlane(c, tx, ty, planeAngle) 
         swapBuffers();
         return
       }
@@ -583,15 +583,15 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
           // Use the same Quadratic logic for the static crashed trail
           const cpx = fox + (ftx - fox) * 0.45;
           const cpy = foy;
-          const grad = drawCtx.createLinearGradient(ftx, fty, fox, foy);
+          const grad = c.createLinearGradient(ftx, fty, fox, foy);
           grad.addColorStop(0, 'rgba(225, 29, 40, 0.35)'); grad.addColorStop(1, 'rgba(225, 29, 40, 0.01)');
-          drawCtx.beginPath(); drawCtx.moveTo(fox, foy); drawCtx.quadraticCurveTo(cpx, cpy, ftx, fty); drawCtx.lineTo(ftx, foy); drawCtx.closePath(); drawCtx.fillStyle = grad; drawCtx.fill()
-          drawCtx.beginPath(); drawCtx.moveTo(fox, foy); drawCtx.quadraticCurveTo(cpx, cpy, ftx, fty); drawCtx.strokeStyle = 'rgba(225,29,40,0.45)'; drawCtx.lineWidth = 3.5; drawCtx.lineJoin = 'round'; drawCtx.lineCap = 'round'; drawCtx.stroke()
+          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.lineTo(ftx, foy); c.closePath(); c.fillStyle = grad; c.fill()
+          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.strokeStyle = 'rgba(225,29,40,0.45)'; c.lineWidth = 3.5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke()
         }
         const p = crashPlane.current;
         p.x += p.vx * fpsRatio; p.vx *= Math.pow(1.08, fpsRatio); p.y += p.vy * fpsRatio; p.vy -= 0.20 * fpsRatio;
         p.angle = Math.atan2(p.vy, p.vx);
-        if (p.x < W + 140) drawPlane(drawCtx, p.x, p.y, p.angle);
+        if (p.x < W + 140) drawPlane(c, p.x, p.y, p.angle);
         swapBuffers();
       }
     }
@@ -801,7 +801,7 @@ function Sidebar({ bets, prevBets, activeTab, onTab, totalCount }) {
   const topBets     = [...bets].sort((a,b) => (b.win||0)-(a.win||0))
   const list        = activeTab==='all' ? sortedBets : activeTab==='previous' ? sortedPrev : topBets
   return (
-    <aside style={{ width:220, background:C.sidebar, borderRight:`1px solid ${C.border}`, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
+    <aside style={{ width:'100%', height:'100%', background:C.sidebar, display:'flex', flexDirection:'column', flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}` }}>
         {[['all','ALL BETS'],['previous','PREVIOUS'],['top','TOP']].map(([k,lbl]) => (
           <div key={k} onClick={() => onTab(k)} style={{
@@ -1781,6 +1781,7 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [onlineCount, setOnlineCount] = useState(0)
   const [targetPhone, setTargetPhone] = useState('')
   const [newBalance, setNewBalance] = useState('')
   const [adminMsg, setAdminMsg] = useState({ text: '', isError: false })
@@ -1815,7 +1816,7 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     .then(r => r.json())
-    .then(d => { setData(d); setLoading(false) })
+    .then(d => { setData(d); setOnlineCount(d.onlineCount || 0); setLoading(false) })
     .catch(() => setLoading(false))
   }, [token, refreshKey, refreshTrigger])
 
@@ -1825,6 +1826,10 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <h2 style={{ color:C.yellow, margin:0, fontSize:18 }}>🚀 ADMIN: UPCOMING</h2>
+            <div style={{ background: 'rgba(34,197,94,0.1)', border: `1px solid ${C.green}`, padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} className="live-dot" />
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.green }}>{onlineCount} ONLINE</span>
+            </div>
             <button onClick={() => setRefreshKey(p => p + 1)} style={{ background:C.yellow, color:'#000', border:'none', borderRadius:4, padding:'4px 10px', fontSize:11, fontWeight:800, cursor:'pointer' }}>REFRESH</button>
           </div>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
@@ -2296,7 +2301,9 @@ export default function App() {
 
         {/* Sidebar */}
         {!isMobile && (
-          <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+          <div style={{ width: 220, flexShrink: 0, borderRight:`1px solid ${C.border}` }}>
+            <Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/>
+          </div>
         )}
         {isMobile && showSidebar && (
           <>
@@ -2308,7 +2315,7 @@ export default function App() {
         )}
 
         {/* Game column */}
-        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY: isMobile ? 'auto' : 'hidden', overflowX: 'hidden', minWidth:0 }} className="hide-scroll">
 
           {/* History bar */}
           <div style={{ height:36, background:C.panel, borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:6, padding:'0 8px', flexShrink:0 }}>
@@ -2338,7 +2345,13 @@ export default function App() {
           <div className="rainbow-line" style={{ flexShrink:0 }}/>
 
           {/* Canvas + overlays */}
-          <div style={{ flex:1, position:'relative', overflow:'hidden', minHeight:0 }}>
+          <div style={{ 
+            flex: isMobile ? 'none' : 1, 
+            height: isMobile ? '42vw' : 'auto',
+            minHeight: isMobile ? '220px' : 0,
+            position:'relative', 
+            overflow:'hidden' 
+          }}>
             <GameCanvas 
               phase={phase} 
               multiplierRef={multRef} 
@@ -2369,6 +2382,9 @@ export default function App() {
             <BetPanel slot={slots[0]} phase={phase} currentMult={mult} onAction={handleBetAction}/>
             <BetPanel slot={slots[1]} phase={phase} currentMult={mult} onAction={handleBetAction}/>
           </div>
+
+          {/* Mobile All Bets List — Renders below bet panels on mobile */}
+          {isMobile && <div style={{ flexShrink:0, height:400, borderTop:`1px solid ${C.border}` }}><Sidebar bets={bots} prevBets={prevBots} activeTab={sideTab} onTab={setSideTab} totalCount={totalBets}/></div>}
 
           {/* Bottom bar */}
           <div style={{ height:26, background:'#0a0b10', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', flexShrink:0 }}>

@@ -1349,8 +1349,8 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
     const n = parseFloat(amt)
     const p = phone.trim();
 
-    if (!amt || isNaN(n) || n < 10 || n > 500000) {
-      setErr('Enter an amount between 10 and 500,000')
+    if (!amt || isNaN(n) || n < 49 || n > 500000) {
+      setErr('Enter an amount between 49 and 500,000')
       return
     }
     if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) {
@@ -1445,7 +1445,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
           <input
             max={500000}
             type="number"
-            placeholder="Amount (min KES 10)"
+            placeholder="Amount (min KES 49)"
             value={amt}
             onChange={e => { setAmt(e.target.value); setErr('') }}
             style={{
@@ -1457,7 +1457,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
         </div>
 
         {err && <div style={{ color:'#ef4444', fontSize:11, marginBottom:8 }}>{err}</div>}
-        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 10. All transactions are subject to 5% tax.</div>
+        <div style={{ color:C.muted, fontSize:10, marginBottom:18 }}>Minimum KES 49. All transactions are subject to 5% tax.</div>
         <button onClick={handlePay} disabled={loading} style={{ width:'100%', background:C.greenDark, border:'none', color:'#fff', padding:'13px 0', borderRadius:8, fontWeight:900, fontSize:14, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
           <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>M</div>
           {loading ? 'PROCESSING...' : 'Pay with M-Pesa'}

@@ -14,8 +14,8 @@ const Deposit = () => {
         if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) {
             return alert('Please enter a valid phone number');
         }
-        if (!amount || isNaN(n) || n < 10 || n > 500000) {
-            return alert('Please enter an amount between 10 and 500,000');
+        if (!amount || isNaN(n) || n < 49 || n > 500000) {
+            return alert('Please enter an amount between 49 and 500,000');
         }
 
         setLoading(true);

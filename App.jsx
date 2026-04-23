@@ -1891,6 +1891,60 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
   )
 }
 
+// ─── BALANCE ADJUSTMENT MODAL ────────────────────────────────────────────────
+function BalanceAdjustmentModal({ token, onClose }) {
+  const [targetPhone, setTargetPhone] = useState('')
+  const [newBalance, setNewBalance] = useState('')
+  const [adminMsg, setAdminMsg] = useState({ text: '', isError: false })
+  const [loading, setLoading] = useState(false)
+
+  const handleUpdateBalance = async () => {
+    if (!targetPhone || !newBalance) return;
+    setLoading(true)
+    setAdminMsg({ text: 'Processing...', isError: false });
+    try {
+      const res = await fetch(`${API_URL}/api/admin/update-balance`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone: targetPhone, balance: newBalance })
+      });
+      const result = await res.json();
+      if (result.status) {
+        setAdminMsg({ text: `Success: ${result.message}`, isError: false });
+        setTargetPhone(''); setNewBalance('');
+      } else {
+        setAdminMsg({ text: result.message || 'Update failed', isError: true });
+      }
+    } catch (e) {
+      setAdminMsg({ text: 'Connection error', isError: true });
+    } finally {
+      setLoading(false)
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.95)', zIndex:1100, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#1a1b2e', borderRadius:12, padding:24, width:'100%', maxWidth:400, border:`1px solid ${C.red}`, boxShadow: '0 0 30px rgba(225,29,40,0.2)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <h2 style={{ color:C.red, margin:0, fontSize:18 }}>💰 BALANCE EDITOR</h2>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <label style={{ fontSize: 12, color: C.textDim }}>User Phone Number</label>
+          <input placeholder="254..." value={targetPhone} onChange={e => setTargetPhone(e.target.value)} style={{ background: '#0a0b10', border: `1px solid ${C.border}`, color: '#fff', padding: 12, borderRadius: 6, fontSize: 14, outline: 'none' }} />
+          <label style={{ fontSize: 12, color: C.textDim }}>Set New Balance (KES)</label>
+          <input type="number" placeholder="0.00" value={newBalance} onChange={e => setNewBalance(e.target.value)} style={{ background: '#0a0b10', border: `1px solid ${C.border}`, color: '#fff', padding: 12, borderRadius: 6, fontSize: 14, outline: 'none' }} />
+          <button onClick={handleUpdateBalance} disabled={loading} style={{ background: C.red, color: '#fff', border: 'none', padding: '14px', borderRadius: 6, fontWeight: 800, cursor: 'pointer', marginTop: 8 }}>{loading ? 'SYNCING...' : 'UPDATE DATABASE'}</button>
+        </div>
+        {adminMsg.text && <div style={{ marginTop: 16, padding: 10, borderRadius: 6, background: adminMsg.isError ? 'rgba(225,29,40,0.1)' : 'rgba(34,197,94,0.1)', fontSize: 12, color: adminMsg.isError ? C.red : C.green, textAlign: 'center', fontWeight: 700 }}>{adminMsg.text}</div>}
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [loading,      setLoading]      = useState(true)
@@ -1944,7 +1998,9 @@ export default function App() {
   const [isAdmin,        setIsAdmin]        = useState(false)
   const [showAdminDb,    setShowAdminDb]    = useState(false)
   const [logoClicks,     setLogoClicks]     = useState(0)
+  const [balClicks,      setBalClicks]      = useState(0)
   const [adminRefreshTrigger, setAdminRefreshTrigger] = useState(0)
+  const [showBalAdjustment,   setShowBalAdjustment]   = useState(false)
 
   const socketRef    = useRef(null)
   const slotsRef     = useRef(slots)
@@ -1993,6 +2049,18 @@ export default function App() {
       const next = prev + 1;
       if (next >= 7) {
         setShowAdminDb(true);
+        return 0;
+      }
+      return next;
+    });
+  };
+
+  const handleSpribeClick = () => {
+    if (!isAdmin) return;
+    setBalClicks(prev => {
+      const next = prev + 1;
+      if (next >= 5) {
+        setShowBalAdjustment(true);
         return 0;
       }
       return next;
@@ -2296,6 +2364,8 @@ export default function App() {
 
       {showAdminDb && <AdminDashboard token={authToken} refreshTrigger={adminRefreshTrigger} onClose={() => setShowAdminDb(false)} />}
 
+      {showBalAdjustment && <BalanceAdjustmentModal token={authToken} onClose={() => setShowBalAdjustment(false)} />}
+
       {/* Main area */}
       <div style={{ flex:1, display:'flex', overflow:'hidden', position:'relative' }}>
 
@@ -2391,6 +2461,10 @@ export default function App() {
             <span onClick={()=>setShowFair(true)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>🛡️ Provably Fair Game</span>
             <span onClick={()=>setShowFooter(p=>!p)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>
               Powered by <span style={{ color:'#6b7280', fontWeight:400 }}>SPRIBE</span>
+              Powered by <span 
+                onClick={(e) => { e.stopPropagation(); handleSpribeClick(); }}
+                style={{ color:'#6b7280', fontWeight:400, cursor: isAdmin ? 'pointer' : 'default' }}
+              >SPRIBE</span>
             </span>
           </div>
 

@@ -2459,8 +2459,7 @@ export default function App() {
           {/* Bottom bar */}
           <div style={{ height:26, background:'#0a0b10', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', flexShrink:0 }}>
             <span onClick={()=>setShowFair(true)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>🛡️ Provably Fair Game</span>
-            <span onClick={()=>setShowFooter(p=>!p)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}>
-              Powered by <span style={{ color:'#6b7280', fontWeight:400 }}>SPRIBE</span>
+            <span onClick={()=>setShowFooter(p=>!p)} style={{ fontSize:9, color:C.muted, cursor:'pointer' }}> 
               Powered by <span 
                 onClick={(e) => { e.stopPropagation(); handleSpribeClick(); }}
                 style={{ color:'#6b7280', fontWeight:400, cursor: isAdmin ? 'pointer' : 'default' }}

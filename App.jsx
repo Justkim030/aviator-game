@@ -410,7 +410,6 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       raf = requestAnimationFrame(render)
 
       // Fix: Define 'c' as the offscreen context (fctx) for double buffering.
-      // This resolves the "ReferenceError: c is not defined" crash.
       const c = fctx.current;
       if (!c) return;
 
@@ -442,14 +441,14 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
       const t = Date.now() * 0.001
 
       // Axes
-      c.strokeStyle = 'rgba(255,255,255,0.35)'
-      c.lineWidth = 1.5; c.setLineDash([])
-      c.beginPath(); c.moveTo(ox-6, oy); c.lineTo(W-8, oy); c.stroke()
-      c.strokeStyle = 'rgba(255,255,255,0.07)'; c.lineWidth = 1; c.setLineDash([3,10])
-      c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox, 16); c.stroke()
-      c.setLineDash([])
-      c.fillStyle = 'rgba(255,255,255,0.35)'
-      c.beginPath(); c.arc(ox, oy, 3, 0, Math.PI*2); c.fill()
+      drawCtx.strokeStyle = 'rgba(255,255,255,0.35)'
+      drawCtx.lineWidth = 1.5; drawCtx.setLineDash([])
+      drawCtx.beginPath(); drawCtx.moveTo(ox-6, oy); drawCtx.lineTo(W-8, oy); drawCtx.stroke()
+      drawCtx.strokeStyle = 'rgba(255,255,255,0.07)'; drawCtx.lineWidth = 1; drawCtx.setLineDash([3,10])
+      drawCtx.beginPath(); drawCtx.moveTo(ox, oy); drawCtx.lineTo(ox, 16); drawCtx.stroke()
+      drawCtx.setLineDash([])
+      drawCtx.fillStyle = 'rgba(255,255,255,0.35)'
+      drawCtx.beginPath(); drawCtx.arc(ox, oy, 3, 0, Math.PI*2); drawCtx.fill()
 
       // ── WAITING / COUNTDOWN ──────────────────────────────────────────────────
       if (phase === 'waiting' || phase === 'countdown') {
@@ -460,9 +459,9 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
         // Plane tail sits exactly on the x-axis at origin.
         const taxiX = ox + Math.sin(t * (Math.PI * 2) / 4) * 18
         const taxiAng = Math.sin(t * (Math.PI * 2) / 4) * 0.04 - 0.03
-        c.beginPath(); c.moveTo(ox, oy); c.lineTo(taxiX, oy); c.strokeStyle = C.red; c.lineWidth = 3.5; c.lineCap = 'round'; c.stroke()
-        c.beginPath(); c.arc(ox, oy, 4, 0, Math.PI * 2); c.fillStyle = C.red; c.fill() // Red dot at origin
-        drawPlane(c, taxiX, oy, taxiAng)
+        drawCtx.beginPath(); drawCtx.moveTo(ox, oy); drawCtx.lineTo(taxiX, oy); drawCtx.strokeStyle = C.red; drawCtx.lineWidth = 3.5; drawCtx.lineCap = 'round'; drawCtx.stroke()
+        drawCtx.beginPath(); drawCtx.arc(ox, oy, 4, 0, Math.PI * 2); drawCtx.fillStyle = C.red; drawCtx.fill()
+        drawPlane(drawCtx, taxiX, oy, taxiAng)
         swapBuffers();
         return
       }
@@ -539,15 +538,15 @@ function GameCanvas({ phase, multiplierRef, lastUpdateRef, startTime, lowPerf })
           // Use the same Quadratic logic for the static crashed trail
           const cpx = fox + (ftx - fox) * 0.45;
           const cpy = foy;
-          const grad = c.createLinearGradient(ftx, fty, fox, foy);
+          const grad = drawCtx.createLinearGradient(ftx, fty, fox, foy);
           grad.addColorStop(0, 'rgba(225, 29, 40, 0.35)'); grad.addColorStop(1, 'rgba(225, 29, 40, 0.01)');
-          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.lineTo(ftx, foy); c.closePath(); c.fillStyle = grad; c.fill()
-          c.beginPath(); c.moveTo(fox, foy); c.quadraticCurveTo(cpx, cpy, ftx, fty); c.strokeStyle = 'rgba(225,29,40,0.45)'; c.lineWidth = 3.5; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke()
+          drawCtx.beginPath(); drawCtx.moveTo(fox, foy); drawCtx.quadraticCurveTo(cpx, cpy, ftx, fty); drawCtx.lineTo(ftx, foy); drawCtx.closePath(); drawCtx.fillStyle = grad; drawCtx.fill()
+          drawCtx.beginPath(); drawCtx.moveTo(fox, foy); drawCtx.quadraticCurveTo(cpx, cpy, ftx, fty); drawCtx.strokeStyle = 'rgba(225,29,40,0.45)'; drawCtx.lineWidth = 3.5; drawCtx.lineJoin = 'round'; drawCtx.lineCap = 'round'; drawCtx.stroke()
         }
         const p = crashPlane.current;
         p.x += p.vx * fpsRatio; p.vx *= Math.pow(1.08, fpsRatio); p.y += p.vy * fpsRatio; p.vy -= 0.20 * fpsRatio;
         p.angle = Math.atan2(p.vy, p.vx);
-        if (p.x < W + 140) drawPlane(c, p.x, p.y, p.angle);
+        if (p.x < W + 140) drawPlane(drawCtx, p.x, p.y, p.angle);
         swapBuffers();
       }
     }

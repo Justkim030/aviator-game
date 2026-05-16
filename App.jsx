@@ -175,7 +175,7 @@ const NAV_ITEMS = [
   { label:'App' },
 ]
 
-function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, onMyBetsClick, isMobile }) {
+function AviatorNav({ isLoggedIn, onLogin, onDeposit, onLogoClick, onMyBetsClick, isMobile }) {
   return (
     <div style={{ background:'#0d0f18', borderBottom:`1px solid ${C.border}`, flexShrink:0, fontFamily:'Arial,sans-serif' }}>
       {/* Top row */}
@@ -208,12 +208,6 @@ function AviatorNav({ isLoggedIn, onLogin, onDeposit, onRegister, onLogoClick, o
           <span onClick={onLogin} style={{ color:C.textDim, fontSize:11, cursor:'pointer' }}>
             {isLoggedIn ? 'Profile' : 'Login'}
           </span>
-          {!isLoggedIn && (
-            <button onClick={onRegister} style={{
-              background:C.green, border:'none', color:'#fff',
-              padding:'6px 14px', borderRadius:4, fontWeight:900, fontSize:12, cursor:'pointer',
-            }}>Register</button>
-          )}
           <button onClick={onDeposit} style={{
             background:C.yellow, border:'none', color:'#000',
             padding:'6px 18px', borderRadius:4, fontWeight:900, fontSize:12, cursor:'pointer',
@@ -922,7 +916,7 @@ function ChatPanel({ messages, onClose }) {
 }
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
-function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
+function LoginPage({ onLogin, onBack }) {
   const [phone,    setPhone]    = useState('')
   const [password, setPassword] = useState('')
   const [keep,     setKeep]     = useState(true)
@@ -973,7 +967,6 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12, fontSize:12 }}>
           <span style={{ color:'#fff', fontWeight:700, cursor:'pointer' }}>Login</span>
-          <button onClick={onRegisterRedirect} style={{ background:'#16a34a', border:'none', color:'#fff', padding:'6px 16px', borderRadius:4, fontWeight:900, fontSize:12, cursor:'pointer' }}>Register</button>
         </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'14px 0', borderBottom:`1px solid #1e2230`, position:'relative' }}>
@@ -984,9 +977,9 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
         <div style={{ marginBottom:28 }}>
           <span style={{ fontWeight:900, fontSize:28, color:C.red, fontStyle:'italic' }}>✈ Aviator</span>
         </div>
-        <p style={{ color:'#9ca3af', fontSize:13, marginBottom:24, lineHeight:1.5 }}>
-          Enter your phone number and password below to login to your account.
-          Otherwise click Register with the same details to create a new account.
+        <p style={{ color:'#9ca3af', fontSize:14, marginBottom:24, lineHeight:1.5 }}>
+          Enter your phone number and password below to login to your account. 
+          If you don't have an account, one will be created for you automatically.
         </p>
         <div style={{ marginBottom:16 }}>
           <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Phone Number</div>
@@ -1024,244 +1017,9 @@ function LoginPage({ onLogin, onBack, onRegisterRedirect }) {
         <button onClick={handleLogin} style={{ width:'100%', background:'#22c55e', border:'none', color:'#fff', padding:'14px', borderRadius:6, fontWeight:900, fontSize:15, cursor:'pointer', marginBottom:16 }}>
           Login
         </button>
-        <div style={{ textAlign:'center', fontSize:13, color:'#9ca3af', marginBottom:24 }}>
-          Don't have an account? <span onClick={onRegisterRedirect} style={{ color:'#22c55e', cursor:'pointer', fontWeight:700 }}>Register here</span>
-        </div>
         <div style={{ textAlign:'center', fontSize:13, color:'#9ca3af' }}>
           🇰🇪 Kenya
         </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── REGISTER PAGE ────────────────────────────────────────────────────────────
-function RegisterPage({ onRegister, onBack, onLoginRedirect }) {
-  const [phone,     setPhone]     = useState('')
-  const [password,  setPassword]  = useState('')
-  const [confirm,   setConfirm]   = useState('')
-  const [referral,  setReferral]  = useState('')
-  const [showPw,    setShowPw]    = useState(false)
-  const [showCfm,   setShowCfm]   = useState(false)
-  const [agree,     setAgree]     = useState(false)
-  const [over18,    setOver18]    = useState(false)
-  const [error,     setError]     = useState('')
-
-  const handleRegister = async () => {
-    const p = phone.trim();
-    const pw = password.trim();
-
-    if (!p || p.length < 10 || p.length > 15 || !/^\+?\d+$/.test(p)) { setError('Enter a valid phone number'); return }
-    if (!pw || pw.length < 6 || pw.length > 128) { setError('Password must be between 6 and 128 characters'); return }
-    if (pw !== confirm)             { setError('Passwords do not match'); return }
-    if (!agree)                     { setError('You must agree to the Terms & Conditions'); return }
-    if (!over18)                    { setError('You must confirm you are 18 years or older'); return }
-
-    setError('')
-
-    try {
-      const response = await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: p, password: pw })
-      });
-      const data = await response.json();
-      if (data.status) {
-        // Auto-login after registration
-        const loginRes = await fetch(`${API_URL}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: p, password: pw })
-        });
-
-        if (loginRes.status === 429) {
-          setError('Registration successful, but too many login attempts. Please wait 15 minutes.');
-          return;
-        }
-
-        const loginData = await loginRes.json();
-        if (loginData.status) onRegister(loginData.user);
-      } else {
-        setError(data.message || 'Registration failed');
-      }
-    } catch (err) {
-      setError('Connection failed. Is the server running?');
-    }
-  }
-
-  const inputStyle = {
-    width:'100%', background:'#1a2035', border:`1px solid #2a3050`,
-    color:'#fff', padding:'12px 14px', borderRadius:6, fontSize:14,
-    outline:'none', boxSizing:'border-box',
-  }
-  const labelStyle = { fontWeight:700, fontSize:13, marginBottom:6, display:'block' }
-  const hintStyle  = { color:'#6b7280', fontSize:11, marginTop:4 }
-
-  return (
-    <div style={{ minHeight:'100dvh', background:'#0f1623', fontFamily:'Arial,sans-serif', color:'#fff', overflowY:'auto' }}>
-      {/* Nav */}
-      <div style={{ background:'#0d0f18', borderBottom:`1px solid #1e2230`, padding:'0 16px', height:52, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:10 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <span style={{ fontSize:16, color:'#6b7280' }}>☰</span>
-          <span style={{ fontWeight:900, fontSize:22, color:C.red, fontStyle:'italic' }}>✈ Aviator</span>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:12, fontSize:12 }}>
-          <span onClick={onLoginRedirect} style={{ color:'#fff', fontWeight:700, cursor:'pointer' }}>Login</span>
-          <span style={{ background:'#16a34a', color:'#fff', padding:'6px 16px', borderRadius:4, fontWeight:900, fontSize:12 }}>Register</span>
-        </div>
-      </div>
-
-      {/* Back + title */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'14px 0', borderBottom:`1px solid #1e2230`, position:'relative' }}>
-        <span onClick={onBack} style={{ position:'absolute', left:16, cursor:'pointer', fontSize:18, color:'#fff' }}>‹</span>
-        <span style={{ fontSize:15, fontWeight:700 }}>Create Account</span>
-      </div>
-
-      {/* Form */}
-      <div style={{ maxWidth:500, margin:'28px auto', padding:'0 20px 40px' }}>
-        {/* Brand */}
-        <div style={{ marginBottom:20 }}>
-          <span style={{ fontWeight:900, fontSize:28, color:C.red, fontStyle:'italic' }}>✈ Aviator</span>
-        </div>
-        <p style={{ color:'#9ca3af', fontSize:13, marginBottom:24, lineHeight:1.6 }}>
-          Create your free account to start playing. Already have an account?{' '}
-          <span onClick={onLoginRedirect} style={{ color:C.green, cursor:'pointer', fontWeight:700 }}>Login here</span>
-        </p>
-
-        {/* Phone */}
-        <div style={{ marginBottom:16 }}>
-          <label style={labelStyle}>Phone Number</label>
-          <input maxLength={15} type="tel" value={phone} onChange={e=>setPhone(e.target.value)}
-            placeholder="e.g. 0712 234567" style={inputStyle}/>
-          <div style={hintStyle}>Must be a valid Kenyan phone number</div>
-        </div>
-
-        {/* Password */}
-        <div style={{ marginBottom:16 }}>
-          <label style={labelStyle}>Password</label>
-          <div style={{ position:'relative' }}>
-            <input maxLength={128} type={showPw?'text':'password'} value={password}
-              onChange={e=>setPassword(e.target.value)}
-              placeholder="Min. 6 characters"
-              style={{...inputStyle, paddingRight:44}}/>
-            <span onClick={()=>setShowPw(p=>!p)} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', cursor:'pointer', color:'#6b7280', fontSize:14 }}>
-              {showPw?'🙈':'👁'}
-            </span>
-          </div>
-          {/* Strength bar */}
-          {password.length > 0 && (
-            <div style={{ marginTop:6 }}>
-              <div style={{ height:4, borderRadius:2, background:'#1e2230', overflow:'hidden' }}>
-                <div style={{
-                  height:'100%', borderRadius:2,
-                  width: password.length < 6 ? '25%' : password.length < 10 ? '55%' : '90%',
-                  background: password.length < 6 ? C.red : password.length < 10 ? C.yellow : C.green,
-                  transition:'width 0.3s, background 0.3s',
-                }}/>
-              </div>
-              <div style={{ fontSize:10, color: password.length < 6 ? C.red : password.length < 10 ? C.yellow : C.green, marginTop:3 }}>
-                {password.length < 6 ? 'Weak' : password.length < 10 ? 'Medium' : 'Strong'}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Confirm Password */}
-        <div style={{ marginBottom:16 }}>
-          <label style={labelStyle}>Confirm Password</label>
-          <div style={{ position:'relative' }}>
-            <input maxLength={128} type={showCfm?'text':'password'} value={confirm}
-              onChange={e=>setConfirm(e.target.value)}
-              placeholder="Re-enter your password"
-              style={{
-                ...inputStyle, paddingRight:44,
-                border: confirm && confirm !== password ? '1px solid #ef4444' : `1px solid #2a3050`,
-              }}/>
-            <span onClick={()=>setShowCfm(p=>!p)} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', cursor:'pointer', color:'#6b7280', fontSize:14 }}>
-              {showCfm?'🙈':'👁'}
-            </span>
-          </div>
-          {confirm && confirm !== password && (
-            <div style={{ color:'#ef4444', fontSize:11, marginTop:4 }}>Passwords do not match</div>
-          )}
-        </div>
-
-        {/* Referral code (optional) */}
-        <div style={{ marginBottom:20 }}>
-          <label style={labelStyle}>
-            Referral Code <span style={{ color:C.muted, fontWeight:400, fontSize:11 }}>(optional)</span>
-          </label>
-          <input maxLength={20} type="text" value={referral} onChange={e=>setReferral(e.target.value)}
-            placeholder="Enter referral code if you have one"
-            style={inputStyle}/>
-        </div>
-
-        {/* Terms checkbox */}
-        <div onClick={()=>setAgree(p=>!p)} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:12, cursor:'pointer' }}>
-          <div style={{
-            width:20, height:20, borderRadius:4, flexShrink:0, marginTop:1,
-            background: agree ? C.green : '#1a2035',
-            border:`1px solid ${agree ? C.green : '#2a3050'}`,
-            display:'flex', alignItems:'center', justifyContent:'center',
-          }}>
-            {agree && <span style={{ color:'#fff', fontSize:12, fontWeight:900 }}>✓</span>}
-          </div>
-          <span style={{ fontSize:12, color:'#9ca3af', lineHeight:1.5 }}>
-            I agree to the{' '}
-            <span style={{ color:C.green }}>Terms & Conditions</span>
-            {' '}and{' '}
-            <span style={{ color:C.green }}>Privacy Policy</span>
-          </span>
-        </div>
-
-        {/* 18+ checkbox */}
-        <div onClick={()=>setOver18(p=>!p)} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:22, cursor:'pointer' }}>
-          <div style={{
-            width:20, height:20, borderRadius:4, flexShrink:0, marginTop:1,
-            background: over18 ? C.green : '#1a2035',
-            border:`1px solid ${over18 ? C.green : '#2a3050'}`,
-            display:'flex', alignItems:'center', justifyContent:'center',
-          }}>
-            {over18 && <span style={{ color:'#fff', fontSize:12, fontWeight:900 }}>✓</span>}
-          </div>
-          <span style={{ fontSize:12, color:'#9ca3af', lineHeight:1.5 }}>
-            I confirm I am <span style={{ color:'#fff', fontWeight:700 }}>18 years or older</span> and I understand gambling may have adverse effects if not done with moderation.
-          </span>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div style={{ color:'#ef4444', fontSize:12, marginBottom:14, padding:'10px 14px', background:'rgba(239,68,68,0.1)', borderRadius:6, border:'1px solid rgba(239,68,68,0.2)' }}>
-            ⚠ {error}
-          </div>
-        )}
-
-        {/* Register button */}
-        <button onClick={handleRegister} style={{
-          width:'100%', background:C.green, border:'none', color:'#fff',
-          padding:'14px', borderRadius:6, fontWeight:900, fontSize:15,
-          cursor:'pointer', marginBottom:16, transition:'filter 0.15s',
-        }}>
-          Create Account
-        </button>
-
-        {/* Divider */}
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <div style={{ flex:1, height:1, background:'#1e2230' }}/>
-          <span style={{ color:C.muted, fontSize:12 }}>or</span>
-          <div style={{ flex:1, height:1, background:'#1e2230' }}/>
-        </div>
-
-        {/* Already have account */}
-        <button onClick={onLoginRedirect} style={{
-          width:'100%', background:'transparent', border:`1px solid #2a3050`,
-          color:'#fff', padding:'13px', borderRadius:6, fontWeight:700,
-          fontSize:14, cursor:'pointer', marginBottom:20,
-        }}>
-          Login to Existing Account
-        </button>
-
-        <div style={{ textAlign:'center', fontSize:13, color:'#9ca3af' }}>🇰🇪 Kenya</div>
       </div>
     </div>
   )
@@ -1401,7 +1159,7 @@ function DepositModal({ onClose, isLoggedIn, onLoginRedirect, onDeposit }) {
           </div>
           <p style={{ color:C.textDim, fontSize:13, marginBottom:24, margin:'0 0 24px' }}>You need to be logged in to make a deposit.</p>
           <button onClick={onLoginRedirect} style={{ width:'100%', background:C.greenDark, border:'none', color:'#fff', padding:13, borderRadius:8, fontWeight:900, fontSize:14, cursor:'pointer', marginBottom:10 }}>
-            LOGIN / REGISTER
+            LOGIN
           </button>
           <button onClick={onClose} style={{ width:'100%', background:'transparent', border:`1px solid ${C.border}`, color:C.textDim, padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer' }}>
             CANCEL
@@ -1790,7 +1548,11 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     .then(r => r.json())
-    .then(d => { setData(d); setOnlineCount(d.onlineCount || 0); setLoading(false) })
+    .then(d => { 
+      setData(d); 
+      setOnlineCount(d.onlineCount || 0); 
+      setLoading(false);
+    })
     .catch(() => setLoading(false))
   }, [token, refreshKey, refreshTrigger])
 
@@ -1809,7 +1571,13 @@ function AdminDashboard({ token, onClose, refreshTrigger }) {
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:24, cursor:'pointer', lineHeight:1 }}>×</button>
         </div>
 
-        {loading ? <p>Loading future rounds...</p> : (
+        {loading ? <p>Loading future rounds...</p> : 
+         data?.status === false ? (
+           <div style={{ color: C.red, padding: '40px 20px', textAlign: 'center' }}>
+             <p style={{ fontWeight: 800 }}>⚠️ ACCESS DENIED</p>
+             <p style={{ fontSize: 12, color: C.textDim }}>{data.message || 'You do not have permission to view this page.'}</p>
+           </div>
+         ) : (
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.border}`, color:C.muted }}>
@@ -1982,7 +1750,6 @@ export default function App() {
     setBal(userData.balance);
     setIsLoggedIn(true);
     setShowLogin(false);
-    setShowRegister(false);
     setShowDeposit(true);
   };
 
@@ -2216,17 +1983,10 @@ export default function App() {
   }, [])
 
   if (loading) return <SplashScreen/>
-  if (showRegister) return (
-    <RegisterPage
-      onBack={()=>setShowRegister(false)}
-      onLoginRedirect={()=>{ setShowRegister(false); setShowLogin(true) }}
-      onRegister={handleAuthSuccess}
-    />
-  )
+
   if (showLogin) return (
     <LoginPage
       onBack={()=>setShowLogin(false)}
-      onRegisterRedirect={()=>{ setShowLogin(false); setShowRegister(true) }}
       onLogin={handleAuthSuccess}
     />
   )
@@ -2287,7 +2047,6 @@ export default function App() {
       <AviatorNav
         isLoggedIn={isLoggedIn}
         onLogin={()=>{ if(isLoggedIn) handleLogout(); else setShowLogin(true) }}
-        onRegister={()=>setShowRegister(true)}
         onDeposit={()=>{ if(!isLoggedIn){ setShowLogin(true) } else { setShowDeposit(true) } }}
         onLogoClick={handleLogoClick}
         onMyBetsClick={handleMyBetsClick}
